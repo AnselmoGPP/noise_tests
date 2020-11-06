@@ -1,0 +1,11 @@
+#!/bin/bash
+#chmod -x filename
+
+# Build and compile the visualizer library
+cd _BUILD
+#rm CMakeCache.txt cmake_install.cmake libMachLib.a Makefile
+#rm -r CMakeFiles
+cmake -G"Unix Makefiles" ..
+make
+
+cd code/tester && ./tester

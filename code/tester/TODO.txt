@@ -1,0 +1,3 @@
+vertices[] & indices[] size dynamic
+dibujar ejes coordenadas
+cambiar cámara
