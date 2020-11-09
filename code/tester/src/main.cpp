@@ -4,6 +4,8 @@
 
 // Includes --------------------
 
+#include <iostream>
+
 #ifdef IMGUI_IMPL_OPENGL_LOADER_GLEW
 #include "GL/glew.h"
 #elif IMGUI_IMPL_OPENGL_LOADER_GLAD
@@ -15,14 +17,14 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "imgui.h"
+#include "examples/imgui_impl_glfw.h"
+#include "examples/imgui_impl_opengl3.h"
 
-#include "FastNoiseLite.h"
-
-#include "auxiliar.hpp"     // chronometer, fps
+#include "auxiliar.hpp"
 #include "camera.hpp"
 #include "shader.hpp"
-
-#include <iostream>
+#include "geometry.hpp"
 
 // Function declarations --------------------
 
@@ -40,16 +42,17 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
-Camera cam(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera cam(glm::vec3(64.0f, -30.0f, 90.0f));
 float lastX =  SCR_WIDTH  / 2.0;
 float lastY =  SCR_HEIGHT / 2.0;
 bool firstMouse = true;
 
 // timing
-timerSet timer;
+timerSet timer(0);
 
 // lighting
-glm::vec3 lightPos(0.0f, 0.0f, 10.0f);
+glm::vec3 lightPos(0.0f, 0.0f, 30.0f);
+glm::vec3 lightDir(-0.57735f, 0.57735f, 0.57735f);
 
 // Function definitions --------------------
 
@@ -62,7 +65,7 @@ int main()
         return -1;
     }
 
-    glfwWindowHint(GLFW_SAMPLES, 0);                                // antialiasing
+    glfwWindowHint(GLFW_SAMPLES, 1);                                // antialiasing
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -126,52 +129,9 @@ int main()
 
     // ----- Set up vertex data, buffers, and configure vertex attributes
 
-    FastNoiseLite noise;
-    noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    terrain land(128);
 
-    const size_t siz = 128;
-    float field[siz][siz][11];  //float (*field)[11] = new float[siz*siz][11];  // delete[] field;
-
-    for(int y = 0; y < siz; y++)
-        for(int x = 0; x < siz; x++)
-        {
-            // positions
-            field[x][y][0] = x;
-            field[x][y][1] = y;
-            field[x][y][2] = noise.GetNoise((float)x, (float)y);
-
-            // colors
-            field[x][y][3] = 0.5f;
-            field[x][y][4] = 0.5f;
-            field[x][y][5] = 0.5f;
-
-            // textures
-            field[x][y][6] = x;
-            field[x][y][7] = y;
-
-            // normals
-            field[x][y][8] = 0.0f;
-            field[x][y][9] = 0.0f;
-            field[x][y][10]= 1.0f;
-        }
-
-    unsigned int drawnVertices = (siz-1)*(siz-1)*2*3;
-    unsigned int indices[drawnVertices/3][3];       //unsigned int (*indices)[3] = new float[(siz-1)*(siz-1)*2][3]; // delete[] indices;
-    int index = 0;
-
-    for(int y = 0; y < siz-1; y++)
-        for(int x = 0; x < siz-1; x++)
-        {
-            // indices
-            indices[index  ][0] = x;
-            indices[index  ][1] = x + siz;
-            indices[index++][2] = x + 1;
-            indices[index  ][0] = x + siz;
-            indices[index  ][1] = x + siz + 1;
-            indices[index++][2] = x + 1;
-        }
-
-    unsigned fieldVAO, VBO, EBO;
+    unsigned int fieldVAO, VBO, EBO;
     glGenVertexArrays(1, &fieldVAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -179,9 +139,9 @@ int main()
     glBindVertexArray(fieldVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(field), field, GL_STATIC_DRAW);  // GL_DYNAMIC_DRAW, GL_STATIC_DRAW, GL_STREAM_DRAW
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*land.totalVert*11, land.field, GL_STATIC_DRAW);  // GL_DYNAMIC_DRAW, GL_STATIC_DRAW, GL_STREAM_DRAW
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*(siz-1)*(siz-1)*2*3, indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*land.totalVertUsed, land.indices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)nullptr);              // position attribute
     glEnableVertexAttribArray(0);
@@ -218,12 +178,12 @@ int main()
     glBindTexture(GL_TEXTURE_2D, texture1);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);       // Texture wrapping
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);               // GL_REPEAT  GL_MIRRORED_REPEAT  GL_CLAMP_TO_EDGE  GL_CLAMP_TO_BORDER
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);   // Texture filtering (?)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);           // GL_LINEAR  GL_NEAREST
 
-    image = stbi_load("../../../code/tester/textures/grass1.jpg", &width, &height, &numberChannels, 0);
+    image = stbi_load("../../../code/tester/textures/grass2.png", &width, &height, &numberChannels, 0);
     if(image)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, (numberChannels == 4? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image);
@@ -263,7 +223,15 @@ int main()
     // ----- Other operations
 
     timer.startTime();
-    timer.setMaxFPS(30);
+
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    ImGui::StyleColorsDark();                                    // ImGui::StyleColorsClassic();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    const char* glsl_version = "#version 330";
+    ImGui_ImplOpenGL3_Init(glsl_version);
 
     // ----- Render loop
     while (!glfwWindowShouldClose(window))
@@ -277,10 +245,16 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);           // GL_STENCIL_BUFFER_BIT
 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        //ImGui::ShowTestWindow();
+
         myProgram.UseProgram();
-        myProgram.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+        myProgram.setVec3("objectColor", 0.1f, 0.6f, 0.1f);
         myProgram.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
         myProgram.setVec3("lightPos", lightPos);
+        myProgram.setVec3("lightDir", lightDir);
         myProgram.setVec3("camPos", cam.Position);
 
         glActiveTexture(GL_TEXTURE0);               // Bind textures on corresponding texture unit
@@ -295,7 +269,7 @@ int main()
         //model = glm::rotate(model, (float)chron.GetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
         //model = glm::scale(model, glm::vec3(1.0, 1.0, 1.0));
 
-        glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // If it doesn't change each frame, it can be placed outside the render loop
+        glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
         myProgram.setMat4("projection", projection);
 
         glm::mat4 view = cam.GetViewMatrix();
@@ -311,7 +285,7 @@ int main()
         myProgram.setMat3("normalMatrix", normalMatrix);
 
         glBindVertexArray(fieldVAO);
-        glDrawElements(GL_TRIANGLES, (siz-1)*(siz-1)*2*3, GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDrawElements(GL_TRIANGLES, land.totalVertUsed, GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
 
         /*
         glBindVertexArray(VAO);
@@ -344,6 +318,9 @@ int main()
         glBindVertexArray(lightSourceVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 */
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         // -----------------
 
         //timer.printTimeData();
@@ -361,6 +338,10 @@ int main()
     glDeleteBuffers(1, &EBO);
     glDeleteProgram(myProgram.ID);
     //glDeleteProgram(lightSourceProgram.ID);
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     glfwTerminate();
 
@@ -405,12 +386,12 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos)
         firstMouse = false;
     }
 
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos;   // reversed since y-coords go from bottom to top
+    float xoffset = lastX - xpos;
+    float yoffset = lastY - ypos;
     lastX = xpos;
     lastY = ypos;
 
-    cam.ProcessMouseMovement(xoffset, yoffset, 0);
+    cam.ProcessMouseMovement(xoffset, yoffset, 1);
 }
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)

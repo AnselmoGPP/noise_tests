@@ -8,11 +8,11 @@
 enum Camera_Movement { FORWARD, BACKWARD, LEFT, RIGHT };
 
 // Default camera values
-const float YAW         = -90.0f;
-const float PITCH       =  0.0f;
-const float SPEED       =  2.5f;
+const float YAW         =  90.0f;
+const float PITCH       = -50.0f;
+const float SPEED       =  30.0f;
 const float SENSITIVITY =  0.1f;
-const float FOV        =  45.0f;   // fov
+const float FOV         =  45.0f;   // fov
 
 // Class that processes input and calculates the corresponding Euler angles, vectors and matrices for use in OpenGL
 class Camera
@@ -33,7 +33,7 @@ public:
     float fov;
 
     // constructor with vectors
-    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
+    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f), float yaw = YAW, float pitch = PITCH);
 
     // constructor with scalar values
     Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);

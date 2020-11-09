@@ -1,5 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
-PROJECT(tester)
+PROJECT(tester_2)
 
 FIND_PACKAGE(OpenGL REQUIRED)
 
@@ -20,11 +20,17 @@ ADD_EXECUTABLE(${PROJECT_NAME}
 	src/auxiliar.cpp
 	src/shader.cpp
 	src/camera.cpp
+	src/geometry.cpp
 
 	include/auxiliar.hpp
 	include/shader.hpp
 	include/camera.hpp
+	include/geometry.hpp
 
+	shaders/vertexShader.vs
+	shaders/fragmentShader.fs
+
+	TODO.txt
 	CMakeLists.txt
 )
 
@@ -42,6 +48,8 @@ TARGET_SOURCES(${PROJECT_NAME} PRIVATE
 
 TARGET_INCLUDE_DIRECTORIES( ${PROJECT_NAME} PUBLIC
         include
+
+        ../../extern/noise/FastNoise/Cpp
 
 	../../extern/glad/include
 	../../extern/glew/glew-2.1.0/include

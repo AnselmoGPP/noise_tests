@@ -20,10 +20,12 @@ ADD_EXECUTABLE(${PROJECT_NAME}
 	src/auxiliar.cpp
 	src/shader.cpp
 	src/camera.cpp
+	src/geometry.cpp
 
 	include/auxiliar.hpp
 	include/shader.hpp
 	include/camera.hpp
+	include/geometry.hpp
 
 	shaders/vertexShader.vs
 	shaders/fragmentShader.fs

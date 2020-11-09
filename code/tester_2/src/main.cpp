@@ -4,6 +4,8 @@
 
 // Includes --------------------
 
+#include <iostream>
+
 #ifdef IMGUI_IMPL_OPENGL_LOADER_GLEW
 #include "GL/glew.h"
 #elif IMGUI_IMPL_OPENGL_LOADER_GLAD
@@ -11,16 +13,18 @@
 #endif
 #include "GLFW/glfw3.h"
 #define STB_IMAGE_IMPLEMENTATION
-//#include "stb_image.h"
+#include "stb_image.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "imgui.h"
+#include "examples/imgui_impl_glfw.h"
+#include "examples/imgui_impl_opengl3.h"
 
-#include "auxiliar.hpp"     // chronometer, fps
+#include "auxiliar.hpp"
 #include "camera.hpp"
 #include "shader.hpp"
-
-#include <iostream>
+#include "geometry.hpp"
 
 // Function declarations --------------------
 
@@ -38,16 +42,17 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
-Camera cam(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera cam(glm::vec3(64.0f, -30.0f, 90.0f));
 float lastX =  SCR_WIDTH  / 2.0;
 float lastY =  SCR_HEIGHT / 2.0;
 bool firstMouse = true;
 
 // timing
-timerSet timer;
+timerSet timer(0);
 
 // lighting
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 lightPos(0.0f, 0.0f, 30.0f);
+glm::vec3 lightDir(-0.57735f, 0.57735f, 0.57735f);
 
 // Function definitions --------------------
 
@@ -60,7 +65,7 @@ int main()
         return -1;
     }
 
-    glfwWindowHint(GLFW_SAMPLES, 0);                                // antialiasing
+    glfwWindowHint(GLFW_SAMPLES, 1);                                // antialiasing
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -114,156 +119,44 @@ int main()
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);    // Back to default
 
     // ----- Build and compile our shader program
-    Shader lightingProgram(
+    Shader myProgram(
                 "../../../code/tester/shaders/vertexShader.vs",
-                "../../../code/tester/shaders/lightingFragS.fs" );
+                "../../../code/tester/shaders/fragmentShader.fs" );
 
-    Shader lightSourceProgram(
-                "../../../code/tester/shaders/vertexShader.vs",
-                "../../../code/tester/shaders/lightSourceFragS.fs" );
+    //Shader lightSourceProgram(
+    //            "../../../code/tester/shaders/vertexShader.vs",
+    //            "../../../code/tester/shaders/lightSourceFragS.fs" );
 
     // ----- Set up vertex data, buffers, and configure vertex attributes
-    float vertices0[] = {
-        // positions          // colors           // texture
-         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,       // top right
-         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,       // bottom right
-        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,       // bottom left
-        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f        // top left
-    };
 
-    unsigned indices0[] = {
-        0, 1, 3,
-        1, 2, 3
-    };
+    terrain land(128);
 
-    float vertices1[] = {
-            // position            // texture
-            -0.5f,  0.5f,  0.5f,   0.0f, 1.0f,  // front
-             0.5f, -0.5f,  0.5f,   1.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,   1.0f, 1.0f,
-            -0.5f,  0.5f,  0.5f,   0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,   0.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,   1.0f, 0.0f,
-
-             0.5f, -0.5f, -0.5f,   0.0f, 0.0f,  // back
-            -0.5f,  0.5f, -0.5f,   1.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,   0.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,   0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,   1.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,   1.0f, 1.0f,
-
-             0.5f,  0.5f,  0.5f,   0.0f, 0.0f,  // top
-            -0.5f,  0.5f, -0.5f,   1.0f, 1.0f,
-            -0.5f,  0.5f,  0.5f,   0.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,   0.0f, 0.0f,
-             0.5f,  0.5f, -0.5f,   1.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,   1.0f, 1.0f,
-
-             0.5f, -0.5f,  0.5f,   0.0f, 1.0f,  // floor
-            -0.5f, -0.5f,  0.5f,   0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,   1.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,   0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,   1.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,   1.0f, 1.0f,
-
-             0.5f, -0.5f,  0.5f,   1.0f, 0.0f,  // right
-             0.5f,  0.5f, -0.5f,   0.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,   0.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,   1.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,   1.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,   0.0f, 1.0f,
-
-            -0.5f,  0.5f,  0.5f,   1.0f, 0.0f,  // left
-            -0.5f, -0.5f, -0.5f,   0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,   0.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,   1.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,   1.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,   0.0f, 1.0f
-        };
-
-    glm::vec3 cubePositions1[] = {
-        glm::vec3( 0.0f,  0.0f,  0.0f),
-        glm::vec3( 2.0f,  5.0f, -15.0f),
-        glm::vec3(-1.5f, -2.2f, -2.5f),
-        glm::vec3(-3.8f, -2.0f, -12.3f),
-        glm::vec3( 2.4f, -0.4f, -3.5f),
-        glm::vec3(-1.7f,  3.0f, -7.5f),
-        glm::vec3( 1.3f, -2.0f, -2.5f),
-        glm::vec3( 1.5f,  2.0f, -2.5f),
-        glm::vec3( 1.5f,  0.2f, -1.5f),
-        glm::vec3(-1.3f,  1.0f, -1.5f)
-    };
-
-    float vertices[] = {
-        // position           // normals
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
-    };
-
-    unsigned cubeVAO, VBO, EBO;
-    glGenVertexArrays(1, &cubeVAO);
+    unsigned int fieldVAO, VBO, EBO;
+    glGenVertexArrays(1, &fieldVAO);
     glGenBuffers(1, &VBO);
-    //glGenBuffers(1, &EBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(fieldVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);  // GL_DYNAMIC_DRAW, GL_STATIC_DRAW, GL_STREAM_DRAW
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*land.totalVert*11, land.field, GL_STATIC_DRAW);  // GL_DYNAMIC_DRAW, GL_STATIC_DRAW, GL_STREAM_DRAW
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*land.totalVertUsed, land.indices, GL_STATIC_DRAW);
 
-    glBindVertexArray(cubeVAO);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)nullptr);                // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)nullptr);              // position attribute
     glEnableVertexAttribArray(0);
-    //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));  // color attribute
-    //glEnableVertexAttribArray(1);
-    //glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));   // texture coords
-    //glEnableVertexAttribArray(2);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));     // texture coords
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)(3 * sizeof(float)));  // color attribute
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6 * sizeof(float)));   // texture coords
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8 * sizeof(float)));   // normals coords
     glEnableVertexAttribArray(3);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);           // unbind VBO (not usual)
     glBindVertexArray(0);                       // unbind VAO (not usual)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);   // unbind EBO
 
+/*
     unsigned int lightSourceVAO;
     glGenVertexArrays(1, &lightSourceVAO);
     glBindVertexArray(lightSourceVAO);
@@ -271,25 +164,26 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)nullptr);
     glEnableVertexAttribArray(0);
-/*
+*/
+
     // ----- Load and create a texture
     unsigned texture1, texture2;
     int width, height, numberChannels;
     unsigned char *image;
 
-    //stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(true);
 
     // Texture 1
     glGenTextures(1, &texture1);
     glBindTexture(GL_TEXTURE_2D, texture1);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);       // Texture wrapping
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);               // GL_REPEAT  GL_MIRRORED_REPEAT  GL_CLAMP_TO_EDGE  GL_CLAMP_TO_BORDER
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);   // Texture filtering
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);   // Texture filtering (?)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);           // GL_LINEAR  GL_NEAREST
 
-    image = stbi_load("../../../textures/box1.jpg", &width, &height, &numberChannels, 0);
+    image = stbi_load("../../../code/tester/textures/grass2.png", &width, &height, &numberChannels, 0);
     if(image)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, (numberChannels == 4? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image);
@@ -299,6 +193,7 @@ int main()
 
     stbi_image_free(image);
 
+/*
     // Texture 2
     glGenTextures(1, &texture2);
     glBindTexture(GL_TEXTURE_2D, texture2);
@@ -319,15 +214,24 @@ int main()
 
     stbi_image_free(image);
 */
+
     // Tell OGL for each sampler to which texture unit it belongs to (only has to be done once)
-    //myProgram.UseProgram();
-    //glUniform1i(glGetUniformLocation(myProgram.ID, "texture1"), 0);
+    myProgram.UseProgram();
+    glUniform1i(glGetUniformLocation(myProgram.ID, "texture1"), 0);
     //glUniform1i(glGetUniformLocation(myProgram.ID, "texture2"), 1);
 
     // ----- Other operations
 
     timer.startTime();
-    timer.setMaxFPS(30);
+
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    ImGui::StyleColorsDark();                                    // ImGui::StyleColorsClassic();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    const char* glsl_version = "#version 330";
+    ImGui_ImplOpenGL3_Init(glsl_version);
 
     // ----- Render loop
     while (!glfwWindowShouldClose(window))
@@ -341,41 +245,47 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);           // GL_STENCIL_BUFFER_BIT
 
-        lightingProgram.UseProgram();
-        lightingProgram.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-        lightingProgram.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
-        lightingProgram.setVec3("lightPos", lightPos);
-        lightingProgram.setVec3("camPos", cam.Position);
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        //ImGui::ShowTestWindow();
 
-        //glActiveTexture(GL_TEXTURE0);           // Bind textures on corresponding texture unit
-        //glBindTexture(GL_TEXTURE_2D, texture1);
+        myProgram.UseProgram();
+        myProgram.setVec3("objectColor", 0.1f, 0.6f, 0.1f);
+        myProgram.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
+        myProgram.setVec3("lightPos", lightPos);
+        myProgram.setVec3("lightDir", lightDir);
+        myProgram.setVec3("camPos", cam.Position);
+
+        glActiveTexture(GL_TEXTURE0);               // Bind textures on corresponding texture unit
+        glBindTexture(GL_TEXTURE_2D, texture1);
         //glActiveTexture(GL_TEXTURE1);
         //glBindTexture(GL_TEXTURE_2D, texture2);
 
-        //myProgram.UseProgram();
+        myProgram.UseProgram();
 
         //glm::mat4 model = glm::mat4(1.0f);
         //model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
         //model = glm::rotate(model, (float)chron.GetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
         //model = glm::scale(model, glm::vec3(1.0, 1.0, 1.0));
 
-        glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // If it doesn't change each frame, it can be placed outside the render loop
-        lightingProgram.setMat4("projection", projection);
+        glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
+        myProgram.setMat4("projection", projection);
 
         glm::mat4 view = cam.GetViewMatrix();
-        lightingProgram.setMat4("view", view);
+        myProgram.setMat4("view", view);
 
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
         model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-        lightingProgram.setMat4("model", model);
+        myProgram.setMat4("model", model);
 
-        glm::mat3 normalMatrix = glm::mat3( glm::transpose(glm::inverse(model)) );  // Used when the model matrix applies non-uniform scaling (normal won't be scaled correctly). Otherwise, use glm::vec3(model)
-        lightingProgram.setMat3("normalMatrix", normalMatrix);
+        glm::mat3 normalMatrix = glm::mat3( glm::transpose(glm::inverse(model)) );      // Used when the model matrix applies non-uniform scaling (normal won't be scaled correctly). Otherwise, use glm::vec3(model)
+        myProgram.setMat3("normalMatrix", normalMatrix);
 
-        glBindVertexArray(cubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(fieldVAO);
+        glDrawElements(GL_TRIANGLES, land.totalVertUsed, GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
 
         /*
         glBindVertexArray(VAO);
@@ -391,7 +301,7 @@ int main()
             //glDrawElements(GL_TRIANGLES, 3*12, GL_UNSIGNED_INT, nullptr);
         }
         */
-
+/*
         lightSourceProgram.UseProgram();
         lightSourceProgram.setMat4("projection", projection);
         lightSourceProgram.setMat4("view", view);
@@ -407,10 +317,13 @@ int main()
 
         glBindVertexArray(lightSourceVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
+*/
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // -----------------
 
-        timer.printTimeData();
+        //timer.printTimeData();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -419,12 +332,16 @@ int main()
 
 
     // ----- De-allocate all resources
-    glDeleteVertexArrays(1, &cubeVAO);
-    glDeleteVertexArrays(1, &lightSourceVAO);
+    glDeleteVertexArrays(1, &fieldVAO);
+    //glDeleteVertexArrays(1, &lightSourceVAO);
     glDeleteBuffers(1, &VBO);
-    //glDeleteBuffers(1, &EBO);
-    glDeleteProgram(lightingProgram.ID);
-    glDeleteProgram(lightSourceProgram.ID);
+    glDeleteBuffers(1, &EBO);
+    glDeleteProgram(myProgram.ID);
+    //glDeleteProgram(lightSourceProgram.ID);
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     glfwTerminate();
 
@@ -469,12 +386,12 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos)
         firstMouse = false;
     }
 
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos;   // reversed since y-coords go from bottom to top
+    float xoffset = lastX - xpos;
+    float yoffset = lastY - ypos;
     lastX = xpos;
     lastY = ypos;
 
-    cam.ProcessMouseMovement(xoffset, yoffset, 0);
+    cam.ProcessMouseMovement(xoffset, yoffset, 1);
 }
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)

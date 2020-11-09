@@ -1,9 +1,10 @@
 #include "camera.hpp"
 #include "glad/glad.h"
-#include <vector>
+#include <iostream>
+
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
-    : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), fov(FOV)
+    : Front(glm::vec3(1.0f, 0.0f, 0.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), fov(FOV)
 {
     Position = position;
     WorldUp = up;
@@ -30,6 +31,7 @@ glm::mat4 Camera::GetViewMatrix()
 void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 {
     float velocity = MovementSpeed * deltaTime;
+    //std::cout << MovementSpeed << " * " << deltaTime << " = " << velocity << std::endl;
     if(direction == FORWARD)
         Position += Front * velocity;
     if(direction == BACKWARD)
@@ -72,10 +74,21 @@ void Camera::updateCameraVectors()
 {
     glm::vec3 front;
     front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
+    front.y = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
+    front.z = sin(glm::radians(Pitch));
+    Front   = glm::normalize(front);
+
+    Right   = glm::normalize(glm::cross(Front, WorldUp));
+    Up      = glm::normalize(glm::cross(Right, Front));
+
+    /*
+    glm::vec3 front;
+    front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
     front.y = sin(glm::radians(Pitch));
     front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
     Front   = glm::normalize(front);
 
     Right   = glm::normalize(glm::cross(Front, WorldUp));
     Up      = glm::normalize(glm::cross(Right, Front));
+    */
 }

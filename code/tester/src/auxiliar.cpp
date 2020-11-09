@@ -55,7 +55,8 @@ void timerSet::computeDeltaTime()
 
 void timerSet::printTimeData()
 {
-    std::cout << frameCounter << " | fps: " << FPS << " | " << currentTimeSeconds << std::endl;
+    std::cout << frameCounter << " | fps: " << FPS << " | " << currentTimeSeconds << "\r";
+    //std::cout << frameCounter << " | fps: " << FPS << " | " << currentTimeSeconds << std::endl;
 }
 
 long double timerSet::getDeltaTime() { return deltaTime / 1000000.l; }
