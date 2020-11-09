@@ -1,3 +1,6 @@
+Añadir nuevos mesh (axis, sun) usando el enum para identificarlos
+FastNoiseLite.h no se sube al repo. Why?
+
 vertices[] & indices[] size dynamic
 dibujar ejes coordenadas
 cambiar cámara

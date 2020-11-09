@@ -3,11 +3,11 @@
 
 # Build and compile the visualizer library
 cd _BUILD
-rm code/tester/tester_2
+rm projects/tester_2/tester_2
 #rm CMakeCache.txt cmake_install.cmake libMachLib.a Makefile
 #rm -r CMakeFiles
 cmake -G"Unix Makefiles" ..
 make
 
-cd code/tester && ./tester
-cd code/tester_2 && ./tester_2
+#cd projects/tester && ./tester
+cd projects/tester_2 && ./tester_2

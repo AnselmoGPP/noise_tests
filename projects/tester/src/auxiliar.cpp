@@ -182,12 +182,14 @@ Eigen::Matrix4f lookAt(Eigen::Vector3f camPosition, Eigen::Vector3f target, Eige
 
 Eigen::Matrix4f ortho(float left, float right, float bottom, float top, float nearP)
 {
-
+    // INCOMPLETE FUNCTION
+    return Eigen::Matrix4f::Identity(4, 4);
 }
 
 Eigen::Matrix4f perspective(float radians, float ratio, float nearPlane, float farPlane)
 {
-
+    // INCOMPLETE FUNCTION
+    return Eigen::Matrix4f::Identity(4, 4);
 }
 
 float radians(float sexagesimalDegrees)

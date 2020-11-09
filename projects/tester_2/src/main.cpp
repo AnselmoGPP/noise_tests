@@ -31,8 +31,11 @@
 void framebuffer_resize_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+
 void processInput(GLFWwindow *window);
 
+void GUI_terrainConfig();
 void printOGLdata();
 
 // Settings (typedef and global data section) --------------------
@@ -46,6 +49,8 @@ Camera cam(glm::vec3(64.0f, -30.0f, 90.0f));
 float lastX =  SCR_WIDTH  / 2.0;
 float lastY =  SCR_HEIGHT / 2.0;
 bool firstMouse = true;
+bool LMBpressed = false;
+bool mouseOverGUI = false;
 
 // timing
 timerSet timer(0);
@@ -53,6 +58,10 @@ timerSet timer(0);
 // lighting
 glm::vec3 lightPos(0.0f, 0.0f, 30.0f);
 glm::vec3 lightDir(-0.57735f, 0.57735f, 0.57735f);
+
+// buffers
+const size_t numBuffers = 2;
+enum VBO { terr, axis };
 
 // Function definitions --------------------
 
@@ -87,28 +96,28 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_resize_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
 
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);  // DISABLED, HIDDEN, NORMAL
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);        // Sticky keys: Make sure that any pressed key is captured
 
     // ----- Load OGL function pointers with GLEW or GLAD
-#ifdef IMGUI_IMPL_OPENGL_LOADER_GLEW
-    glewExperimental = true;        // Needed for core profile (no more from GLEW 2.0)
-    GLenum glewErr = glewInit();
-    if (glewErr != GLEW_OK)
-    {
-        std::cerr << "GLEW error (" << glewErr << "): " << glewGetErrorString(glewErr) << "\n" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-#elif IMGUI_IMPL_OPENGL_LOADER_GLAD
-    // ----- GLAD: Load all OpenGL function pointers
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        std::cout << "GLAD initialization failed" << std::endl;
-        return -1;
-    }
-#endif
+    #ifdef IMGUI_IMPL_OPENGL_LOADER_GLEW
+        glewExperimental = true;        // Needed for core profile (no more from GLEW 2.0)
+        GLenum glewErr = glewInit();
+        if (glewErr != GLEW_OK)
+        {
+            std::cerr << "GLEW error (" << glewErr << "): " << glewGetErrorString(glewErr) << "\n" << std::endl;
+            glfwTerminate();
+            return -1;
+        }
+    #elif IMGUI_IMPL_OPENGL_LOADER_GLAD
+        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+        {
+            std::cout << "GLAD initialization failed" << std::endl;
+            return -1;
+        }
+    #endif
 
     // ----- OGL general options
     printOGLdata();
@@ -120,8 +129,8 @@ int main()
 
     // ----- Build and compile our shader program
     Shader myProgram(
-                "../../../code/tester/shaders/vertexShader.vs",
-                "../../../code/tester/shaders/fragmentShader.fs" );
+                "../../../projects/tester_2/shaders/vertexShader.vs",
+                "../../../projects/tester_2/shaders/fragmentShader.fs" );
 
     //Shader lightSourceProgram(
     //            "../../../code/tester/shaders/vertexShader.vs",
@@ -129,6 +138,7 @@ int main()
 
     // ----- Set up vertex data, buffers, and configure vertex attributes
 
+    // > Terrain
     terrain land(128);
 
     unsigned int fieldVAO, VBO, EBO;
@@ -156,6 +166,10 @@ int main()
     glBindVertexArray(0);                       // unbind VAO (not usual)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);   // unbind EBO
 
+    // Axis
+    unsigned int axisVAO, axisVBO;
+    glGenVertexArrays(1, &axisVAO);
+    glGenVertexArrays(1, &axisVBO);
 /*
     unsigned int lightSourceVAO;
     glGenVertexArrays(1, &lightSourceVAO);
@@ -183,7 +197,7 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);   // Texture filtering (?)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);           // GL_LINEAR  GL_NEAREST
 
-    image = stbi_load("../../../code/tester/textures/grass2.png", &width, &height, &numberChannels, 0);
+    image = stbi_load("../../../textures/grass2.png", &width, &height, &numberChannels, 0);
     if(image)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, (numberChannels == 4? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image);
@@ -220,36 +234,42 @@ int main()
     glUniform1i(glGetUniformLocation(myProgram.ID, "texture1"), 0);
     //glUniform1i(glGetUniformLocation(myProgram.ID, "texture2"), 1);
 
-    // ----- Other operations
-
-    timer.startTime();
-
+    // ----- GUI (1) Initialization
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    ImGui::StyleColorsDark();                                    // ImGui::StyleColorsClassic();
+    ImGui::StyleColorsDark();                                   // ImGui::StyleColorsClassic();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     const char* glsl_version = "#version 330";
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    // ----- Render loop
+    // ----- Other operations
+
+    timer.startTime();
+    
+    // >>>>> Render loop <<<<<
     while (!glfwWindowShouldClose(window))
     {
         timer.computeDeltaTime();
-
+        
         processInput(window);
 
         // render ----------
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);           // GL_STENCIL_BUFFER_BIT
-
+        
+        // GUI (2) Configuration & Mouse check
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         //ImGui::ShowTestWindow();
+        //ImGui::ShowDemoWindow();
+        GUI_terrainConfig();
 
+        mouseOverGUI = io.WantCaptureMouse;   // io.WantCaptureMouse and io.WantCaptureKeyboard flags are true if dear imgui wants to use our inputs (i.e. cursor is hovering a window). Another option: Set io.MousePos and call ImGui::IsMouseHoveringAnyWindow()
+        
         myProgram.UseProgram();
         myProgram.setVec3("objectColor", 0.1f, 0.6f, 0.1f);
         myProgram.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
@@ -318,6 +338,7 @@ int main()
         glBindVertexArray(lightSourceVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 */
+        // GUI (3) Rendering
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -332,17 +353,19 @@ int main()
 
 
     // ----- De-allocate all resources
+
     glDeleteVertexArrays(1, &fieldVAO);
     //glDeleteVertexArrays(1, &lightSourceVAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
     glDeleteProgram(myProgram.ID);
     //glDeleteProgram(lightSourceProgram.ID);
-
+    
+    // GUI (4) Resource deallocation
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-
+    
     glfwTerminate();
 
     return 0;
@@ -379,24 +402,45 @@ void processInput(GLFWwindow *window)
 // Get cameraFront from the mouse
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 {
-    if(firstMouse)
+    if (LMBpressed)
     {
+        if (firstMouse)
+        {
+            lastX = xpos;
+            lastY = ypos;
+            firstMouse = false;
+        }
+
+        float xoffset = lastX - xpos;
+        float yoffset = lastY - ypos;
         lastX = xpos;
         lastY = ypos;
-        firstMouse = false;
+
+        cam.ProcessMouseMovement(xoffset, yoffset, 1);
     }
-
-    float xoffset = lastX - xpos;
-    float yoffset = lastY - ypos;
-    lastX = xpos;
-    lastY = ypos;
-
-    cam.ProcessMouseMovement(xoffset, yoffset, 1);
 }
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 {
     cam.ProcessMouseScroll(yoffset);
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (!mouseOverGUI)
+    {
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            LMBpressed = true;
+        }
+        else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            LMBpressed = false;
+            firstMouse = true;
+        }
+    }
 }
 
 // Others ----------------------------------
@@ -408,10 +452,73 @@ void printOGLdata()
 
     std::cout << "-------------------- \n" <<
                  "OpenGL data: " <<
-                 "\n    - Version: " << glGetString(GL_VERSION) <<
-                 "\n    - Vendor: " << glGetString(GL_VENDOR) <<
-                 "\n    - Renderer: " << glGetString(GL_RENDERER) <<
-                 "\n    - GLSL version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) <<
-                 "\n    - Max. attributes supported: " << maxNumberAttributes << std::endl <<
+                 "\n    - Version: "                    << glGetString(GL_VERSION) <<
+                 "\n    - Vendor: "                     << glGetString(GL_VENDOR) <<
+                 "\n    - Renderer: "                   << glGetString(GL_RENDERER) <<
+                 "\n    - GLSL version: "               << glGetString(GL_SHADING_LANGUAGE_VERSION) <<
+                 "\n    - Max. attributes supported: "  << maxNumberAttributes << std::endl <<
                  "-------------------- \n" << std::endl;
+}
+
+void GUI_terrainConfig()
+{
+    /*
+        Scene dimensions (enter numbers)
+        Noise type (drop down)
+        numOctaves (slider)
+        lacunarity (slider)
+        persistance (slider
+        scale       (slider)
+        multiplier  (slider)
+        seed        (enter number)
+        offset (x, y)   (enter numbers)
+    */
+
+    static int dimensions[2] = { 128, 128 };
+    const char* noiseTypes[] = { "Value", "ValueCubic", "Perlin", "Cellular", "OpenSimplex2", "OpenSimplex2S" };
+    static int item_current = 0;
+    static int octaves = 1;
+    static float lacunarity = 0;
+    static float persistance = 0;
+    static float scale = 0.0f;
+    static int multiplier = 0;
+
+    static float seed = 0;
+    static float offset[2] = {0.0f, 0.0f};
+
+    ImGui::Begin("Noise configuration");
+    //ImGui::Text("This is some useful text.");
+    //ImGui::Checkbox("Another Window", &show_another_window);
+
+    ImGui::SliderInt("X dimension", &dimensions[0], 1, 256);
+    ImGui::SliderInt("Y dimension", &dimensions[1], 1, 256);
+    ImGui::Combo("Noise type", &item_current, noiseTypes, IM_ARRAYSIZE(noiseTypes));
+    ImGui::SliderInt("Octaves", &octaves, 0, 10);
+    ImGui::SliderFloat("Lacunarity", &lacunarity, 1.0f, 3.0f);
+    ImGui::SliderFloat("Persistance", &persistance, 0.0f, 1.0f);
+    ImGui::SliderFloat("Scale", &scale, 0.0f, 2.0f);
+    ImGui::SliderInt("Multiplier", &multiplier, 1, 100);
+    // seed
+    // offset
+
+
+
+    FastNoiseLite::NoiseType FNTypes[] = {
+        FastNoiseLite::NoiseType_Value,
+        FastNoiseLite::NoiseType_ValueCubic,
+        FastNoiseLite::NoiseType_Perlin,
+        FastNoiseLite::NoiseType_Cellular,
+        FastNoiseLite::NoiseType_OpenSimplex2,
+        FastNoiseLite::NoiseType_OpenSimplex2S
+    };
+
+
+
+    //ImGui::ColorEdit3("clear color", (float*)&clear_color);
+    //if (ImGui::Button("Button")) counter++;  ImGui::SameLine();  ImGui::Text("counter = %d", counter);
+    //ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::End();
+
+
+
 }
