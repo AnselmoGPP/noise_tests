@@ -4,7 +4,7 @@
 
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
-    : Front(glm::vec3(1.0f, 0.0f, 0.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), fov(FOV)
+    : Front(glm::vec3(1.0f, 0.0f, 0.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), scrollSpeed(SCROLLSPEED), fov(FOV)
 {
     Position = position;
     WorldUp = up;
@@ -14,7 +14,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 }
 
 Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch)
-    : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), fov(FOV)
+    : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), scrollSpeed(SCROLLSPEED), fov(FOV)
 {
     Position = glm::vec3(posX, posY, posZ);
     WorldUp = glm::vec3(upX, upY, upZ);
@@ -31,7 +31,7 @@ glm::mat4 Camera::GetViewMatrix()
 void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 {
     float velocity = MovementSpeed * deltaTime;
-    //std::cout << MovementSpeed << " * " << deltaTime << " = " << velocity << std::endl;
+
     if(direction == FORWARD)
         Position += Front * velocity;
     if(direction == BACKWARD)
@@ -44,9 +44,6 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 
 void Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true)
 {
-    //xoffset *= MouseSensitivity;
-    //yoffset *= MouseSensitivity;
-
     Yaw     += xoffset * MouseSensitivity;
     Pitch   += yoffset * MouseSensitivity;
 
@@ -63,11 +60,11 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constrainPi
 
 void Camera::ProcessMouseScroll(float yoffset)
 {
-    fov -= (float)yoffset;
+    fov -= (float)yoffset * scrollSpeed;
     if(fov < 1.0f)
         fov = 1.0f;
-    if(fov > 45.0f)
-        fov = 45.0f;
+    if(fov > FOV)
+        fov = FOV;
 }
 
 void Camera::updateCameraVectors()
@@ -80,15 +77,4 @@ void Camera::updateCameraVectors()
 
     Right   = glm::normalize(glm::cross(Front, WorldUp));
     Up      = glm::normalize(glm::cross(Right, Front));
-
-    /*
-    glm::vec3 front;
-    front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-    front.y = sin(glm::radians(Pitch));
-    front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-    Front   = glm::normalize(front);
-
-    Right   = glm::normalize(glm::cross(Front, WorldUp));
-    Up      = glm::normalize(glm::cross(Right, Front));
-    */
 }

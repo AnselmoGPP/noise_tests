@@ -53,7 +53,7 @@ bool LMBpressed = false;
 bool mouseOverGUI = false;
 
 // timing
-timerSet timer(0);
+timerSet timer(30);
 
 // lighting
 glm::vec3 lightPos(0.0f, 0.0f, 30.0f);
@@ -62,6 +62,11 @@ glm::vec3 lightDir(-0.57735f, 0.57735f, 0.57735f);
 // buffers
 const size_t numBuffers = 2;
 enum VBO { terr, axis };
+
+// Terrain data (for GUI)
+terrainData terrConf;
+terrainGenerator terraform;
+
 
 // Function definitions --------------------
 
@@ -137,9 +142,9 @@ int main()
     //            "../../../code/tester/shaders/lightSourceFragS.fs" );
 
     // ----- Set up vertex data, buffers, and configure vertex attributes
-
-    // > Terrain
-    terrain land(128);
+    
+    terraform.computeTerrain(terrConf);
+    terrConf.newConfig = false;
 
     unsigned int fieldVAO, VBO, EBO;
     glGenVertexArrays(1, &fieldVAO);
@@ -149,9 +154,9 @@ int main()
     glBindVertexArray(fieldVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*land.totalVert*11, land.field, GL_STATIC_DRAW);  // GL_DYNAMIC_DRAW, GL_STATIC_DRAW, GL_STREAM_DRAW
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*terraform.totalVert*11, terraform.field, GL_STATIC_DRAW);  // GL_DYNAMIC_DRAW, GL_STATIC_DRAW, GL_STREAM_DRAW
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*land.totalVertUsed, land.indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*terraform.totalVertUsed, terraform.indices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)nullptr);              // position attribute
     glEnableVertexAttribArray(0);
@@ -248,14 +253,16 @@ int main()
 
     timer.startTime();
     
-    // >>>>> Render loop <<<<<
+    // >>>>> RENDER LOOP <<<<<
+
     while (!glfwWindowShouldClose(window))
     {
         timer.computeDeltaTime();
         
         processInput(window);
 
-        // render ----------
+        // RENDERING ------------------------
+        // ----------------------------------
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);           // GL_STENCIL_BUFFER_BIT
@@ -270,6 +277,7 @@ int main()
 
         mouseOverGUI = io.WantCaptureMouse;   // io.WantCaptureMouse and io.WantCaptureKeyboard flags are true if dear imgui wants to use our inputs (i.e. cursor is hovering a window). Another option: Set io.MousePos and call ImGui::IsMouseHoveringAnyWindow()
         
+        // Uniforms (fragment shader)
         myProgram.UseProgram();
         myProgram.setVec3("objectColor", 0.1f, 0.6f, 0.1f);
         myProgram.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
@@ -277,17 +285,14 @@ int main()
         myProgram.setVec3("lightDir", lightDir);
         myProgram.setVec3("camPos", cam.Position);
 
+        // Textures
         glActiveTexture(GL_TEXTURE0);               // Bind textures on corresponding texture unit
         glBindTexture(GL_TEXTURE_2D, texture1);
         //glActiveTexture(GL_TEXTURE1);
         //glBindTexture(GL_TEXTURE_2D, texture2);
 
+        // Uniforms (vertex shader)
         myProgram.UseProgram();
-
-        //glm::mat4 model = glm::mat4(1.0f);
-        //model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-        //model = glm::rotate(model, (float)chron.GetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-        //model = glm::scale(model, glm::vec3(1.0, 1.0, 1.0));
 
         glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
         myProgram.setMat4("projection", projection);
@@ -304,8 +309,21 @@ int main()
         glm::mat3 normalMatrix = glm::mat3( glm::transpose(glm::inverse(model)) );      // Used when the model matrix applies non-uniform scaling (normal won't be scaled correctly). Otherwise, use glm::vec3(model)
         myProgram.setMat3("normalMatrix", normalMatrix);
 
+        // Redraw terrain
+        if(terrConf.newConfig)
+        {
+            terraform.computeTerrain(terrConf);
+
+            glBindVertexArray(fieldVAO);
+
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(float)*terraform.totalVert*11, terraform.field, GL_STATIC_DRAW);  // GL_DYNAMIC_DRAW, GL_STATIC_DRAW, GL_STREAM_DRAW
+
+            terrConf.newConfig = false;
+        }
+
         glBindVertexArray(fieldVAO);
-        glDrawElements(GL_TRIANGLES, land.totalVertUsed, GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDrawElements(GL_TRIANGLES, terraform.totalVertUsed, GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
 
         /*
         glBindVertexArray(VAO);
@@ -342,7 +360,8 @@ int main()
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        // -----------------
+        // ----------------------------------
+        // ----------------------------------
 
         //timer.printTimeData();
 
@@ -462,63 +481,52 @@ void printOGLdata()
 
 void GUI_terrainConfig()
 {
-    /*
-        Scene dimensions (enter numbers)
-        Noise type (drop down)
-        numOctaves (slider)
-        lacunarity (slider)
-        persistance (slider
-        scale       (slider)
-        multiplier  (slider)
-        seed        (enter number)
-        offset (x, y)   (enter numbers)
-    */
+    terrainData temp(terrConf);
 
-    static int dimensions[2] = { 128, 128 };
-    const char* noiseTypes[] = { "Value", "ValueCubic", "Perlin", "Cellular", "OpenSimplex2", "OpenSimplex2S" };
-    static int item_current = 0;
-    static int octaves = 1;
-    static float lacunarity = 0;
-    static float persistance = 0;
-    static float scale = 0.0f;
-    static int multiplier = 0;
+    // Temporal types
+    int dimensionX  = (int)terrConf.dimensions[0];
+    int dimensionY  = (int)terrConf.dimensions[1];
+    int item_curr   = (int)terrConf.item_current;
+    int octaves     = (int)terrConf.octaves;
+    int multiplier  = (int)terrConf.multiplier;
+    int seed        = (int)terrConf.seed;
+    int offsetX     = (int)terrConf.offset[0];
+    int offsetY     = (int)terrConf.offset[1];
 
-    static float seed = 0;
-    static float offset[2] = {0.0f, 0.0f};
-
+    // Window
     ImGui::Begin("Noise configuration");
-    //ImGui::Text("This is some useful text.");
     //ImGui::Checkbox("Another Window", &show_another_window);
-
-    ImGui::SliderInt("X dimension", &dimensions[0], 1, 256);
-    ImGui::SliderInt("Y dimension", &dimensions[1], 1, 256);
-    ImGui::Combo("Noise type", &item_current, noiseTypes, IM_ARRAYSIZE(noiseTypes));
-    ImGui::SliderInt("Octaves", &octaves, 0, 10);
-    ImGui::SliderFloat("Lacunarity", &lacunarity, 1.0f, 3.0f);
-    ImGui::SliderFloat("Persistance", &persistance, 0.0f, 1.0f);
-    ImGui::SliderFloat("Scale", &scale, 0.0f, 2.0f);
+    ImGui::Text("Map dimensions:");
+    ImGui::SliderInt("X dimension", &dimensionX, 1, 256);
+    ImGui::SliderInt("Y dimension", &dimensionY, 1, 256);
+    ImGui::Text("Noise configuration: ");
+    const char* noiseTypes[6] = { "Value", "ValueCubic", "Perlin", "Cellular", "OpenSimplex2", "OpenSimplex2S" };
+    ImGui::Combo("Noise type", &item_curr, noiseTypes, IM_ARRAYSIZE(noiseTypes));
+    ImGui::SliderInt("Octaves", &octaves, 1, 10);
+    ImGui::SliderFloat("Lacunarity", &terrConf.lacunarity, 1.0f, 2.5f);
+    ImGui::SliderFloat("Persistance", &terrConf.persistance, 0.0f, 1.0f);
+    ImGui::SliderFloat("Scale", &terrConf.scale, 0.001f, 1.0f);
     ImGui::SliderInt("Multiplier", &multiplier, 1, 100);
-    // seed
-    // offset
-
-
-
-    FastNoiseLite::NoiseType FNTypes[] = {
-        FastNoiseLite::NoiseType_Value,
-        FastNoiseLite::NoiseType_ValueCubic,
-        FastNoiseLite::NoiseType_Perlin,
-        FastNoiseLite::NoiseType_Cellular,
-        FastNoiseLite::NoiseType_OpenSimplex2,
-        FastNoiseLite::NoiseType_OpenSimplex2S
-    };
-
-
+    ImGui::Text("Map selection: ");
+    ImGui::SliderInt("Seed", &seed, 0, 100000);
+    ImGui::SliderInt("X offset", &offsetX, -100, 100);
+    ImGui::SliderInt("Y offset", &offsetY, -100, 100);
 
     //ImGui::ColorEdit3("clear color", (float*)&clear_color);
     //if (ImGui::Button("Button")) counter++;  ImGui::SameLine();  ImGui::Text("counter = %d", counter);
     //ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::End();
 
+    // Types conversion
+    terrConf.dimensions[0] = (size_t)dimensionX;
+    terrConf.dimensions[1] = (size_t)dimensionY;
+    terrConf.item_current = (unsigned int)item_curr;
+    terrConf.octaves = (unsigned int)octaves;
+    terrConf.multiplier = (float)multiplier;
+    terrConf.seed = (unsigned int)seed;
+    terrConf.offset[0] = (float)offsetX;
+    terrConf.offset[1] = (float)offsetY;
 
-
+    // Flag for drawing the terrain again  because data changed
+    if (terrConf != temp) terrConf.newConfig = true;
 }

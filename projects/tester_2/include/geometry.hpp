@@ -7,11 +7,32 @@
 
 #include "FastNoiseLite.h"
 
+
+struct terrainData        // for GUI and drawing terrain
+{
+    terrainData();
+    terrainData(const terrainData& obj);
+    bool operator!= (terrainData& obj);
+
+    bool newConfig;      // flag for recomputing terrain
+
+    size_t dimensions[2];
+    FastNoiseLite::NoiseType noiseType[6] = { FastNoiseLite::NoiseType_Value, FastNoiseLite::NoiseType_ValueCubic, FastNoiseLite::NoiseType_Perlin, FastNoiseLite::NoiseType_Cellular, FastNoiseLite::NoiseType_OpenSimplex2, FastNoiseLite::NoiseType_OpenSimplex2S };
+    unsigned int item_current;
+    unsigned int octaves;       // the biggest, the ...
+    float lacunarity;
+    float persistance;
+    float scale;
+    float multiplier;
+    unsigned int seed;
+    float offset[2];            // <<<<<<<<<<< TODO
+};
+
 class noiseSet
 {
     FastNoiseLite noise;
     FastNoiseLite::NoiseType noiseType;
-    size_t numOctaves;
+    unsigned int numOctaves;
     float lacunarity;   // (determines frequency) [1, inf] Increases number of small features
     float persistance;  // (determines amplitude) [0, 1]   Increases influence of small features
     float scale;
@@ -33,7 +54,7 @@ public:
      *      NoiseType: FastNoiseLite::NoiseType_Perlin, FastNoiseLite::NoiseType_OpenSimplex2, etc.
      */
     noiseSet(
-            size_t NumOctaves,
+            unsigned int NumOctaves,
             float Lacunarity,
             float Persistance,
             float Scale,
@@ -47,23 +68,23 @@ public:
     float GetExtreme();
 };
 
-class terrain
+class terrainGenerator
 {
-    void fillArray();
     size_t getPos(size_t x, size_t y);
 
 public:
-    terrain(size_t sideSize);
-    ~terrain();
+    terrainGenerator();
+    ~terrainGenerator();
 
-    size_t side;
+    size_t side[2];
     unsigned int totalVert;         // Amount of vertices passed to main (example: 3)
     unsigned int totalVertUsed;     // Amount of vertices used for drawing (example: 3*3)
 
     float (*field)[11];
     unsigned int (*indices)[3];
 
-    void printData();
+    void computeTerrain(terrainData td);
+    void printData();               // for debugging
 };
 
 #endif

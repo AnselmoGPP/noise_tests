@@ -12,7 +12,8 @@ const float YAW         =  90.0f;
 const float PITCH       = -50.0f;
 const float SPEED       =  30.0f;
 const float SENSITIVITY =  0.1f;
-const float FOV         =  45.0f;   // fov
+const float SCROLLSPEED =  4.f;
+const float FOV         =  60.0f;   // fov
 
 // Class that processes input and calculates the corresponding Euler angles, vectors and matrices for use in OpenGL
 class Camera
@@ -30,6 +31,7 @@ public:
     // camera options
     float MovementSpeed;
     float MouseSensitivity;
+    float scrollSpeed;
     float fov;
 
     // constructor with vectors
