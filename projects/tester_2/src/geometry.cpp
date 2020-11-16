@@ -11,7 +11,7 @@
 // terrainData -----------------------------------------------------------------
 
 terrainData::terrainData()
-{std::cout << "inside 1" << std::endl;
+{
     newConfig = true;
 
     dimensions[0] = 128;
@@ -26,7 +26,6 @@ terrainData::terrainData()
     seed = 0;
     offset[0] = 0.0f;
     offset[1] = 0.0f;
-    std::cout << "inside 2" << std::endl;
 }
 
 terrainData::terrainData(const terrainData& obj)
@@ -69,10 +68,12 @@ bool terrainData::operator!= (terrainData& obj)
 
 std::ostream& operator << (std::ostream& os, const terrainData& obj)
 {
+    const char* noiseTypeString[6] = { "OpenSimplex2", "OpenSimplex2S", "Cellular", "Perlin", "ValueCubic", "Value" };
+
     os << "----------------------------" << std::endl;
     os << "newConfig: " << obj.newConfig << std::endl;
     os << "Dimensions (x,y): " << obj.dimensions[0] << ", " << obj.dimensions[1] << std::endl;
-    os << "Noise type: " << obj.noiseTypeString[obj.noiseType] << std::endl;
+    os << "Noise type: " << noiseTypeString[obj.noiseType] << std::endl;
     os << "Octaves: " << obj.octaves << std::endl;
     os << "Lacunarity: " << obj.lacunarity << "      Lacunarity ^ Octaves: " << std::pow(obj.lacunarity, (float)(obj.octaves - 1)) << std::endl;
     os << "Persistance: " << obj.persistance << "      Persistance ^ Octaves: " << std::pow(obj.persistance, (float)(obj.octaves - 1)) << std::endl;

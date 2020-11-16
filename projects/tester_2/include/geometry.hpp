@@ -19,7 +19,6 @@ struct terrainData
     friend std::ostream& operator << (std::ostream& os, const terrainData& obj);    ///< Operator << overloading
 
     // Noise data   
-    const char* noiseTypeString[6] = { "OpenSimplex2", "OpenSimplex2S", "Cellular", "Perlin", "ValueCubic", "Value" };  ///< Used in GUI
     FastNoiseLite::NoiseType    noiseType;
     unsigned int                octaves;       // the bigger this is, the greater (x,y) computed for the highest octaves, which makes GetNoise(x,y) output -nan(ind)
     float                       lacunarity;
@@ -34,7 +33,7 @@ struct terrainData
     bool                        newConfig;          ///< Indicates whether the state has changed (used for recomputing and redrawing terrain)
 
 private:
-    FastNoiseLite::NoiseType noiseTypeFN[6] = { FastNoiseLite::NoiseType_Value, FastNoiseLite::NoiseType_ValueCubic, FastNoiseLite::NoiseType_Perlin, FastNoiseLite::NoiseType_Cellular, FastNoiseLite::NoiseType_OpenSimplex2, FastNoiseLite::NoiseType_OpenSimplex2S };
+    //FastNoiseLite::NoiseType noiseTypeFN[6] = { FastNoiseLite::NoiseType_Value, FastNoiseLite::NoiseType_ValueCubic, FastNoiseLite::NoiseType_Perlin, FastNoiseLite::NoiseType_Cellular, FastNoiseLite::NoiseType_OpenSimplex2, FastNoiseLite::NoiseType_OpenSimplex2S };
 };
 
 std::ostream& operator << (std::ostream& os, const terrainData& obj);

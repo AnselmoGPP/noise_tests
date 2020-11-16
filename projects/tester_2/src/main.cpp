@@ -488,6 +488,7 @@ void GUI_terrainConfig()
     // Temporal types
     int dimensionX  = (int)terrConf.dimensions[0];
     int dimensionY  = (int)terrConf.dimensions[1];
+    const char* noiseTypeString[6] = { "OpenSimplex2", "OpenSimplex2S", "Cellular", "Perlin", "ValueCubic", "Value" };
     int noiseType   = (int)terrConf.noiseType;
     int octaves     = (int)terrConf.octaves;
     int multiplier  = (int)terrConf.multiplier;
@@ -502,7 +503,7 @@ void GUI_terrainConfig()
     ImGui::SliderInt("X dimension", &dimensionX, 2, 256);
     ImGui::SliderInt("Y dimension", &dimensionY, 2, 256);
     ImGui::Text("Noise configuration: ");
-    ImGui::Combo("Noise type", &noiseType, terrConf.noiseTypeString, IM_ARRAYSIZE(terrConf.noiseTypeString));
+    ImGui::Combo("Noise type", &noiseType, noiseTypeString, IM_ARRAYSIZE(noiseTypeString));
     ImGui::SliderInt("Octaves", &octaves, 1, 10);
     ImGui::SliderFloat("Lacunarity", &terrConf.lacunarity, 1.0f, 2.5f);
     ImGui::SliderFloat("Persistance", &terrConf.persistance, 0.0f, 1.0f);
