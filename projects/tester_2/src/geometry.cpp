@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <cmath>
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -7,75 +8,16 @@
 
 #include "geometry.hpp"
 
-// noiseSet -----------------------------------------------------------------
-
-noiseSet::noiseSet(unsigned int NumOctaves, float Lacunarity, float Persistance, float Scale, float Multiplier, unsigned int Seed, float (*Offset)[2], FastNoiseLite::NoiseType NoiseType)
-    : noiseType(NoiseType), numOctaves(NumOctaves), lacunarity(Lacunarity), persistance(Persistance), scale(Scale), multiplier(Multiplier)
-{
-    if(scale <= 0) scale = 0.001f;
-
-    // set noise type
-    noise.SetNoiseType(noiseType);
-
-    // set offsets for each octave
-    std::mt19937_64 engine;
-    engine.seed(Seed);
-    std::uniform_int_distribution<int> distribution(-100000, 100000);
-
-    octaveOffsets = std::vector<float[2]>(numOctaves);
-    for(size_t i = 0; i < numOctaves; i++)
-    {
-        if(Offset)
-        {
-            octaveOffsets[i][x] = distribution(engine) + Offset[i][x];
-            octaveOffsets[i][y] = distribution(engine) + Offset[i][y];
-        }
-        else
-        {
-            octaveOffsets[i][x] = distribution(engine);
-            octaveOffsets[i][y] = distribution(engine);
-        }
-    }
-
-    // get extreme value
-    float amplitude = 0;
-    for(int i = 0; i < numOctaves; i++)
-    {
-        extreme += sqrt(1/9) * amplitude;
-        amplitude *= persistance;
-    }
-    extreme *= scale * multiplier;
-}
-
-float noiseSet::GetNoise(float X, float Y)
-{
-    float result = 0;
-    float frequency = 1, amplitude = 1;
-
-    for(int i = 0; i < numOctaves; i++)
-    {
-        X = frequency * X/scale + octaveOffsets[i][x];
-        Y = frequency * Y/scale + octaveOffsets[i][y];
-        result += noise.GetNoise(X, Y) * amplitude;
-
-        frequency *= lacunarity;
-        amplitude *= persistance;
-    }
-
-    return result * scale * multiplier;
-}
-
-float noiseSet::GetExtreme() { return extreme * multiplier * scale; };
-
 // terrainData -----------------------------------------------------------------
 
 terrainData::terrainData()
-{
+{std::cout << "inside 1" << std::endl;
     newConfig = true;
 
     dimensions[0] = 128;
     dimensions[1] = 128;
-    item_current = 2;
+
+    noiseType = FastNoiseLite::NoiseType_Perlin;
     octaves = 6;
     lacunarity = 1.5;
     persistance = 0.5;
@@ -84,6 +26,7 @@ terrainData::terrainData()
     seed = 0;
     offset[0] = 0.0f;
     offset[1] = 0.0f;
+    std::cout << "inside 2" << std::endl;
 }
 
 terrainData::terrainData(const terrainData& obj)
@@ -92,7 +35,8 @@ terrainData::terrainData(const terrainData& obj)
 
     dimensions[0] = obj.dimensions[0];
     dimensions[1] = obj.dimensions[1];
-    item_current = obj.item_current;
+
+    noiseType = obj.noiseType;
     octaves = obj.octaves;
     lacunarity = obj.lacunarity;
     persistance = obj.persistance;
@@ -106,29 +50,120 @@ terrainData::terrainData(const terrainData& obj)
 bool terrainData::operator!= (terrainData& obj)
 {
     if (
-        obj.dimensions[0]   != dimensions[0] || 
-        obj.dimensions[1]   != dimensions[1] ||
+        obj.dimensions[0] != dimensions[0] ||
+        obj.dimensions[1] != dimensions[1] ||
 
-        obj.item_current    != item_current ||
-        obj.octaves         != octaves ||
-        obj.lacunarity      != lacunarity ||
-        obj.persistance     != persistance ||
-        obj.scale           != scale ||
-        obj.multiplier      != multiplier ||
-        obj.seed            != seed ||
-
-        obj.offset[0]       != offset[0] || 
-        obj.offset[1]       != offset[1]
+        obj.noiseType != noiseType ||
+        obj.octaves != octaves ||
+        obj.lacunarity != lacunarity ||
+        obj.persistance != persistance ||
+        obj.scale != scale ||
+        obj.multiplier != multiplier ||
+        obj.seed != seed ||
+        obj.offset[0] != offset[0] ||
+        obj.offset[1] != offset[1]
         )
         return true;
     else return false;
 }
 
+std::ostream& operator << (std::ostream& os, const terrainData& obj)
+{
+    os << "----------------------------" << std::endl;
+    os << "newConfig: " << obj.newConfig << std::endl;
+    os << "Dimensions (x,y): " << obj.dimensions[0] << ", " << obj.dimensions[1] << std::endl;
+    os << "Noise type: " << obj.noiseTypeString[obj.noiseType] << std::endl;
+    os << "Octaves: " << obj.octaves << std::endl;
+    os << "Lacunarity: " << obj.lacunarity << "      Lacunarity ^ Octaves: " << std::pow(obj.lacunarity, (float)(obj.octaves - 1)) << std::endl;
+    os << "Persistance: " << obj.persistance << "      Persistance ^ Octaves: " << std::pow(obj.persistance, (float)(obj.octaves - 1)) << std::endl;
+    os << "Scale: " << obj.scale << std::endl;
+    os << "Multiplier: " << obj.multiplier << std::endl;
+    os << "Seed: " << obj.seed << std::endl;
+    os << "Offset (x, y): " << obj.offset[0] << ", " << obj.offset[1] << std::endl;
+
+    return os;
+}
+
+// noiseSet -----------------------------------------------------------------
+
+noiseSet::noiseSet(terrainData& td, bool addRandomOffset)
+    : noiseType(td.noiseType), numOctaves(td.octaves), lacunarity(td.lacunarity), persistance(td.persistance), scale(td.scale), multiplier(td.multiplier)
+{
+    // unsigned int NumOctaves, float Lacunarity, float Persistance, float Scale, float Multiplier, unsigned int Seed, float (*Offset)[2], FastNoiseLite::NoiseType NoiseType
+    // td.octaves, td.lacunarity, td.persistance, td.scale, td.multiplier, td.seed, nullptr, td.noiseType[2]
+
+    if(scale <= 0) scale = 0.001f;
+
+    // set noise type
+    noise.SetNoiseType(noiseType);
+
+    // set offsets for each octave
+    std::mt19937_64 engine;
+    engine.seed(td.seed);
+    std::uniform_int_distribution<int> distribution(-10000, 10000);
+
+    octaveOffsets = std::vector<float[2]>(numOctaves);
+    for(size_t i = 0; i < numOctaves; i++)
+    {
+        if(addRandomOffset)
+        {
+            octaveOffsets[i][x] = distribution(engine) + td.offset[x];
+            octaveOffsets[i][y] = distribution(engine) + td.offset[y];
+        }
+        else {
+            octaveOffsets[i][x] = td.offset[x];
+            octaveOffsets[i][y] = td.offset[y];
+        }
+
+    }
+
+    // get extreme value
+    extreme = 0;
+    float maxmin = std::sqrt((float)1/9);
+    float amplitude = 1;
+
+    for(int i = 0; i < numOctaves; i++)
+    {
+        extreme += maxmin * amplitude;
+        amplitude *= persistance;
+    }
+
+    extreme *= scale * multiplier;
+}
+
+float noiseSet::GetNoise(float X, float Y, bool includeOffset)
+{
+    float result = 0;
+    float frequency = 1, amplitude = 1;
+
+    for(int i = 0; i < numOctaves; i++)
+    {
+        if (includeOffset)
+        {
+            X = X / scale * frequency + octaveOffsets[i][x];
+            Y = Y / scale * frequency + octaveOffsets[i][y];
+        }
+        else
+        { 
+            X = X / scale * frequency;
+            Y = Y / scale * frequency;
+        }
+
+        result += noise.GetNoise(X, Y) * amplitude;
+
+        frequency *= lacunarity;
+        amplitude *= persistance;
+    }
+
+    return result * scale * multiplier;
+}
+
+float noiseSet::GetExtreme() { return extreme; };
+
 // terrainGenerator -----------------------------------------------------------------
 
 terrainGenerator::terrainGenerator()
 {
-    int siz[2] = { 128, 128 };
     terrainData td;
     computeTerrain(td);
 }
@@ -139,10 +174,10 @@ terrainGenerator::~terrainGenerator()
     delete[] indices;
 }
 
-void terrainGenerator::computeTerrain(terrainData td)
+void terrainGenerator::computeTerrain(terrainData &td)
 {
-    //noiseSet noise(octaves, lacunarity, persistance, scale, multiplier, seed, nullptr, noiseType);
-    noiseSet noise(td.octaves, td.lacunarity, td.persistance, td.scale, td.multiplier, td.seed, nullptr, td.noiseType[2]);
+    noiseSet noise(td, false);
+
     size_t siz[2] = { td.dimensions[0], td.dimensions[1] };
 
     if (siz[0] != side[0] || siz[0] != side[1])
@@ -169,7 +204,7 @@ void terrainGenerator::computeTerrain(terrainData td)
             // positions
             field[pos][0] = x;
             field[pos][1] = y;
-            field[pos][2] = noise.GetNoise((float)x, (float)y);
+            field[pos][2] = noise.GetNoise((float)x, (float)y, true);
 
             // colors
             field[pos][3] = 0.5f;
@@ -187,11 +222,11 @@ void terrainGenerator::computeTerrain(terrainData td)
         }
 
     // Normals
-    glm::vec3* tempNormals = new glm::vec3[totalVert];
+    glm::vec3* tempNormals = new glm::vec3[totalVert];  // Initialize normals to 0
     for (size_t i = 0; i < totalVert; i++)
         tempNormals[i] = glm::vec3(0.f, 0.f, 0.f);
 
-    for (size_t y = 0; y < side[1] - 1; y++)
+    for (size_t y = 0; y < side[1] - 1; y++)            // Compute normals
         for (size_t x = 0; x < side[0] - 1; x++)
         {
             /*
@@ -225,7 +260,7 @@ void terrainGenerator::computeTerrain(terrainData td)
             tempNormals[D] += Dnormal;
         }
 
-    for (int i = 0; i < totalVert; i++)
+    for (int i = 0; i < totalVert; i++)                 // Normalize the normals
     {
         tempNormals[i] = glm::normalize(tempNormals[i]);
 
@@ -233,7 +268,6 @@ void terrainGenerator::computeTerrain(terrainData td)
         field[i][9] = tempNormals[i].y;
         field[i][10] = tempNormals[i].z;
     }
-
     delete[] tempNormals;
 
     // Indices

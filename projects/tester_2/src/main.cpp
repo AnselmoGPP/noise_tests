@@ -64,7 +64,7 @@ const size_t numBuffers = 2;
 enum VBO { terr, axis };
 
 // Terrain data (for GUI)
-terrainData terrConf;
+terrainData terrConf, temp;
 terrainGenerator terraform;
 
 
@@ -142,7 +142,6 @@ int main()
     //            "../../../code/tester/shaders/lightSourceFragS.fs" );
 
     // ----- Set up vertex data, buffers, and configure vertex attributes
-    
     terraform.computeTerrain(terrConf);
     terrConf.newConfig = false;
 
@@ -236,7 +235,7 @@ int main()
 
     // Tell OGL for each sampler to which texture unit it belongs to (only has to be done once)
     myProgram.UseProgram();
-    glUniform1i(glGetUniformLocation(myProgram.ID, "texture1"), 0);
+    myProgram.setInt("texture1", 0);        //glUniform1i(glGetUniformLocation(myProgram.ID, "texture1"), 0);
     //glUniform1i(glGetUniformLocation(myProgram.ID, "texture2"), 1);
 
     // ----- GUI (1) Initialization
@@ -317,7 +316,9 @@ int main()
             glBindVertexArray(fieldVAO);
 
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(float)*terraform.totalVert*11, terraform.field, GL_STATIC_DRAW);  // GL_DYNAMIC_DRAW, GL_STATIC_DRAW, GL_STREAM_DRAW
+            glBufferData(GL_ARRAY_BUFFER, sizeof(float)*terraform.totalVert*11, terraform.field, GL_STATIC_DRAW);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * terraform.totalVertUsed, terraform.indices, GL_STATIC_DRAW);
 
             terrConf.newConfig = false;
         }
@@ -441,7 +442,8 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos)
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 {
-    cam.ProcessMouseScroll(yoffset);
+    if (!mouseOverGUI)
+        cam.ProcessMouseScroll(yoffset);
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
@@ -481,12 +483,12 @@ void printOGLdata()
 
 void GUI_terrainConfig()
 {
-    terrainData temp(terrConf);
+    temp = terrConf;
 
     // Temporal types
     int dimensionX  = (int)terrConf.dimensions[0];
     int dimensionY  = (int)terrConf.dimensions[1];
-    int item_curr   = (int)terrConf.item_current;
+    int noiseType   = (int)terrConf.noiseType;
     int octaves     = (int)terrConf.octaves;
     int multiplier  = (int)terrConf.multiplier;
     int seed        = (int)terrConf.seed;
@@ -497,11 +499,10 @@ void GUI_terrainConfig()
     ImGui::Begin("Noise configuration");
     //ImGui::Checkbox("Another Window", &show_another_window);
     ImGui::Text("Map dimensions:");
-    ImGui::SliderInt("X dimension", &dimensionX, 1, 256);
-    ImGui::SliderInt("Y dimension", &dimensionY, 1, 256);
+    ImGui::SliderInt("X dimension", &dimensionX, 2, 256);
+    ImGui::SliderInt("Y dimension", &dimensionY, 2, 256);
     ImGui::Text("Noise configuration: ");
-    const char* noiseTypes[6] = { "Value", "ValueCubic", "Perlin", "Cellular", "OpenSimplex2", "OpenSimplex2S" };
-    ImGui::Combo("Noise type", &item_curr, noiseTypes, IM_ARRAYSIZE(noiseTypes));
+    ImGui::Combo("Noise type", &noiseType, terrConf.noiseTypeString, IM_ARRAYSIZE(terrConf.noiseTypeString));
     ImGui::SliderInt("Octaves", &octaves, 1, 10);
     ImGui::SliderFloat("Lacunarity", &terrConf.lacunarity, 1.0f, 2.5f);
     ImGui::SliderFloat("Persistance", &terrConf.persistance, 0.0f, 1.0f);
@@ -509,9 +510,8 @@ void GUI_terrainConfig()
     ImGui::SliderInt("Multiplier", &multiplier, 1, 100);
     ImGui::Text("Map selection: ");
     ImGui::SliderInt("Seed", &seed, 0, 100000);
-    ImGui::SliderInt("X offset", &offsetX, -100, 100);
-    ImGui::SliderInt("Y offset", &offsetY, -100, 100);
-
+    ImGui::SliderInt("X offset", &offsetX, -500, 500);
+    ImGui::SliderInt("Y offset", &offsetY, -500, 500);
     //ImGui::ColorEdit3("clear color", (float*)&clear_color);
     //if (ImGui::Button("Button")) counter++;  ImGui::SameLine();  ImGui::Text("counter = %d", counter);
     //ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
@@ -520,7 +520,7 @@ void GUI_terrainConfig()
     // Types conversion
     terrConf.dimensions[0] = (size_t)dimensionX;
     terrConf.dimensions[1] = (size_t)dimensionY;
-    terrConf.item_current = (unsigned int)item_curr;
+    terrConf.noiseType = (FastNoiseLite::NoiseType)noiseType;
     terrConf.octaves = (unsigned int)octaves;
     terrConf.multiplier = (float)multiplier;
     terrConf.seed = (unsigned int)seed;
@@ -528,5 +528,6 @@ void GUI_terrainConfig()
     terrConf.offset[1] = (float)offsetY;
 
     // Flag for drawing the terrain again  because data changed
-    if (terrConf != temp) terrConf.newConfig = true;
+    if (terrConf != temp)
+        terrConf.newConfig = true;
 }

@@ -49,7 +49,7 @@ TARGET_SOURCES(${PROJECT_NAME} PRIVATE
 TARGET_INCLUDE_DIRECTORIES( ${PROJECT_NAME} PUBLIC
         include
 
-        ../../extern/noise/FastNoise/Cpp
+        ../../extern/FastNoise
 
 	../../extern/glad/include
 	../../extern/glew/glew-2.1.0/include

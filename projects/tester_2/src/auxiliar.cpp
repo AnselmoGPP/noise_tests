@@ -7,11 +7,11 @@
 // ----- timerSet ---------------
 
 timerSet::timerSet(int maximumFPS)
-    : currentTime(std::chrono::system_clock::duration::zero()), maxFPS(maximumFPS)
+    : lastTime(std::chrono::system_clock::duration::zero()), maxFPS(maximumFPS)
 {
     startTime();
 
-    currentTimeSeconds = 0;
+    lastTimeSeconds = 0;
     deltaTime = 0;
     FPS = 0;
     frameCounter = 0;
@@ -27,8 +27,8 @@ void timerSet::startTime()
 void timerSet::computeDeltaTime()
 {
     // Get deltaTime (adjust by FPS if flagged)
-    currentTime = std::chrono::high_resolution_clock::now();
-    deltaTime = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - lastTime).count();
+    std::chrono::high_resolution_clock::time_point timeNow  = std::chrono::high_resolution_clock::now();;
+    deltaTime = std::chrono::duration_cast<std::chrono::microseconds>(timeNow - lastTime).count();
 
     if(maxFPS > 0)
     {
@@ -36,18 +36,18 @@ void timerSet::computeDeltaTime()
         if(waitTime > 0)
         {
             std::this_thread::sleep_for(std::chrono::microseconds(waitTime));
-            currentTime = std::chrono::high_resolution_clock::now();
-            deltaTime = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - lastTime).count();
+            timeNow = std::chrono::high_resolution_clock::now();
+            deltaTime = std::chrono::duration_cast<std::chrono::microseconds>(timeNow - lastTime).count();
         }
     }
 
-    lastTime = currentTime;
+    lastTime = timeNow;
 
     // Get FPS
     FPS = std::round(1000000.f / deltaTime);
 
     // Get currentTimeSeconds
-    currentTimeSeconds = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - timeZero).count() / 1000000.l;
+    lastTimeSeconds = std::chrono::duration_cast<std::chrono::microseconds>(timeNow - timeZero).count() / 1000000.l;
 
     // Increment the frame count
     ++frameCounter;
@@ -55,15 +55,15 @@ void timerSet::computeDeltaTime()
 
 void timerSet::printTimeData()
 {
-    std::cout << frameCounter << " | fps: " << FPS << " | " << currentTimeSeconds << "\r";
-    //std::cout << frameCounter << " | fps: " << FPS << " | " << currentTimeSeconds << std::endl;
+    std::cout << frameCounter << " | fps: " << FPS << " | " << lastTimeSeconds << "\r";
+    //std::cout << frameCounter << " | fps: " << FPS << " | " << lastTimeSeconds << std::endl;
 }
 
 long double timerSet::getDeltaTime() { return deltaTime / 1000000.l; }
 
 long double timerSet::getTime()
 {
-    return std::chrono::duration_cast<std::chrono::microseconds>(currentTime - timeZero).count() / 1000000.l;
+    return std::chrono::duration_cast<std::chrono::microseconds>(lastTime - timeZero).count() / 1000000.l;
 }
 
 long double timerSet::getTimeNow()
@@ -78,35 +78,9 @@ void timerSet::setMaxFPS(int newFPS) { maxFPS = newFPS; }
 
 size_t timerSet::getFrameCounter() { return frameCounter; };
 
-// ----- stdTime ---------------
-
-stdTime::stdTime() : 
-    startingTime(std::chrono::high_resolution_clock::now()) { }
-
-long double stdTime::GetTime()
-{
-    currentTime = std::chrono::high_resolution_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(currentTime - startingTime).count() / 1000000.l;
-}
-
-// ----- fpsCheck ---------------
-
-fpsCheck::fpsCheck() :
-    previousTime(std::chrono::high_resolution_clock::now()),
-    currentTime(std::chrono::system_clock::duration::zero()) { }
-
-int fpsCheck::GetFPS()
-{
-    currentTime = std::chrono::high_resolution_clock::now();
-
-    int fps = 1000000 / std::chrono::duration_cast<std::chrono::microseconds>(currentTime - previousTime).count();
-
-    previousTime = currentTime;
-    return fps;
-}
 
 // ----- EigenCG ---------------
-
+/*
 namespace EigenCG
 {
 
@@ -203,3 +177,4 @@ float * value_ptr(Eigen::Matrix4f matrix)
 }
 
 } // EigenCG end
+*/

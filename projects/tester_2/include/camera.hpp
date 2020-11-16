@@ -4,56 +4,91 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
-// Camera options options
+/// Camera movement type. Used for indicating movement direction in ProcessKeyboard()
 enum Camera_Movement { FORWARD, BACKWARD, LEFT, RIGHT };
 
 // Default camera values
-const float YAW         =  90.0f;
-const float PITCH       = -50.0f;
-const float SPEED       =  30.0f;
-const float SENSITIVITY =  0.1f;
-const float SCROLLSPEED =  4.f;
-const float FOV         =  60.0f;   // fov
+const float YAW         =  90.0f;   ///< Initial camera yaw
+const float PITCH       = -50.0f;   ///< Initial camera pitch
+const float SPEED       =  30.0f;   ///< Initial camera speed
+const float SENSITIVITY =  0.1f;    ///< Initial mouse sensitivity
+const float SCROLLSPEED =  4.f;     ///< Initial scroll speed
+const float FOV         =  60.0f;   ///< Initial FOV (field of view)
 
-// Class that processes input and calculates the corresponding Euler angles, vectors and matrices for use in OpenGL
+/**
+* @brief Processes input and calculates the view matrix.
+*
+* Given some input (keyboard, mouse movement, mouse scroll), processes it (gets Euler angles, vectors and matrices) and gets the view matrix.
+*/
 class Camera
 {
 public:
-    // camera attributes
-    glm::vec3 Position;
-    glm::vec3 Front;
-    glm::vec3 Up;
-    glm::vec3 Right;
-    glm::vec3 WorldUp;
-    // euler angles
-    float Yaw;
-    float Pitch;
-    // camera options
-    float MovementSpeed;
-    float MouseSensitivity;
-    float scrollSpeed;
-    float fov;
+    // Camera attributes
+    glm::vec3 Position;         ///< Camera position
+    glm::vec3 Front;            ///< Camera front vector
+    glm::vec3 Up;               ///< Camera up vector (used in lookAt()) (computed from cross(right, front))
+    glm::vec3 Right;            ///< Camera right vector
+    glm::vec3 WorldUp;          ///< World up vector (used for computing camera's right vector) (got from up param. in constructor)
+    // Euler angles
+    float Yaw;                  ///< Camera yaw (Euler angle)
+    float Pitch;                ///< Camera pitch (Euler angle)
+    float Roll;                 ///< Camera roll (Euler angle)
+    // Camera options
+    float MovementSpeed;        ///< Camera speed
+    float MouseSensitivity;     ///< Mouse sensitivity
+    float scrollSpeed;          ///< Scroll speed
+    float fov;                  ///< FOV (field of view)
 
-    // constructor with vectors
+    /**
+     * @brief Construction using vectors
+     * @param position Camera position
+     * @param up Camera up vector
+     * @param yaw Camera yaw
+     * @param pitch Camera pitch
+     * @param roll Camera roll
+     */
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f), float yaw = YAW, float pitch = PITCH);
 
-    // constructor with scalar values
+    /**
+     * @brief Construction using scalar values
+     * @param posX Camera X position
+     * @param posY Camera Y position
+     * @param posZ Camera Z position
+     * @param upX Camera X up vector
+     * @param upY Camera Y up vector
+     * @param upZ Camera Z up vector
+     * @param yaw Camera yaw
+     * @param pitch Camera pitch
+     * @param roll Camera roll
+     */
     Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
 
-    // Returns view matrix
+    /// Returns view matrix
     glm::mat4 GetViewMatrix();
 
-    // Processes input received from any keyboard-like input system
+    /**
+     * @brief Processes input received from any keyboard-like input system
+     * @param direction Camera type of movement (forward, backward, left, right)
+     * @param deltaTime Time between one frame and the next
+     */
     void ProcessKeyboard(Camera_Movement direction, float deltaTime);
 
-    // Processes input received from a mouse input system
+    /**
+     * @brief Processes input received from a mouse input system
+     * @param xoffset Mouse X position difference from one frame to the next
+     * @param yoffset Mouse Y position difference from one frame to the next
+     * @param constrainPitch Limit camera's pitch movement (minimum and maximum value)
+     */
     void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch);
 
-    // Processes input received from a mouse scroll-wheel event
+    /**
+     * @brief Processes input received from a mouse scroll-wheel event
+     * @param yoffset Mouse scrolling value
+     */
     void ProcessMouseScroll(float yoffset);
 
 private:
-    // Calculate front vector from the updated Euler angles
+    /// Calculate front vector from the updated Euler angles (Pitch, Yaw, Roll)
     void updateCameraVectors();
 };
 

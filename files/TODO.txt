@@ -1,7 +1,9 @@
+Doxygen comments (including documenting files)
+Class encapsulation
+
 Añadir nuevos mesh (axis, sun) usando el enum para identificarlos
-FastNoiseLite.h no se sube al repo. Why?
+
+terrain extender beyond limits
 
 vertices[] & indices[] size dynamic
 dibujar ejes coordenadas
-cambiar cámara
-GUI + free mouse + click and rotate camera

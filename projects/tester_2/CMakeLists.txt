@@ -30,7 +30,7 @@ ADD_EXECUTABLE(${PROJECT_NAME}
 	shaders/vertexShader.vs
 	shaders/fragmentShader.fs
 
-	../../TODO.txt
+	../../files/TODO.txt
 	CMakeLists.txt
 )
 

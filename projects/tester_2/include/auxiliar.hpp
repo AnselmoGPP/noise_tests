@@ -5,14 +5,23 @@
 
 #include <chrono>
 
+/**
+ * @brief Tracks time and gives time information
+ *
+ * Main tasks:
+ * <ul>
+ *  <li>Starts time counting</li>
+ *  <li>Computes time between two points in time</li>
+ *  <li>Computes fps (frames per second)</li>
+ *  <li>Sets a maximum fps (uses sleeps)</li>
+ *  <li>Counts number of frames</li>
+ * </ul>
+ */
 class timerSet
 {
-    std::chrono::high_resolution_clock::time_point timeZero;
-    std::chrono::high_resolution_clock::time_point lastTime;
-    std::chrono::high_resolution_clock::time_point currentTime;
-
-    long double currentTimeSeconds;
-
+    std::chrono::high_resolution_clock::time_point timeZero;        ///< Initial time
+    std::chrono::high_resolution_clock::time_point lastTime;        ///< Last registered time. Updated in computeDeltaTime()
+    long double lastTimeSeconds;
     long double deltaTime;
 
     int FPS;
@@ -21,42 +30,28 @@ class timerSet
     size_t frameCounter;
 
 public:
+    /// Constructor.
+    /** @param maxFPS Set a maximum number of fps (tracked by calls to getDeltaTime()). If maxFPS==0 (by default), no minimum fps is set. */
     timerSet(int maxFPS = 0);
 
-    void        startTime();            // Set starting time for the chronometer (startingTime)
-    void        computeDeltaTime();     // Compute frame's duration (time between two calls to this)
-    void        printTimeData();        // Print relevant values
+    void        startTime();            ///< Set starting time for the chronometer (timeZero)
+    void        computeDeltaTime();     ///< Compute frame's duration (time between two calls to this method)
+    void        printTimeData();        ///< Print relevant member variables
 
-    long double getDeltaTime();         // Returns time (seconds) increment between frames (deltaTime)
-    long double getTime();              // Returns time (seconds) when computeDeltaTime() was called
-    long double getTimeNow();           // Returns time (seconds) since timeZero, at the moment of calling GetTimeNow()
-    int         getFPS();               // Get FPS
-    size_t      getFrameCounter();      // Get frame number (depends on the number of times getDeltaTime() was called)
+    long double getDeltaTime();         ///< Returns time (seconds) increment between frames (deltaTime)
+    long double getTime();              ///< Returns time (seconds) when computeDeltaTime() was called
+    long double getTimeNow();           ///< Returns time (seconds) since timeZero, at the moment of calling GetTimeNow()
+    int         getFPS();               ///< Get fps (member variable)
+    size_t      getFrameCounter();      ///< Get frame number (depends on the number of times getDeltaTime() was called)
 
-    void        setMaxFPS(int fps);     // Given a maximum fps, put thread to sleep to get it
+    /// Given a maximum fps, put thread to sleep to get it.
+    /** @param fps Set a maximum number of fps (tracked by calls to getDeltaTime()). If maxFPS==0 (by default), no minimum fps is set. */
+    void        setMaxFPS(int fps);
 };
 
-class stdTime
-{
-    std::chrono::high_resolution_clock::time_point startingTime;
-    std::chrono::high_resolution_clock::time_point currentTime;
 
-public:
-    stdTime();
-
-    long double GetTime();       // Returns time in seconds since object creation
-};
-
-class fpsCheck
-{
-    std::chrono::high_resolution_clock::time_point previousTime;
-    std::chrono::high_resolution_clock::time_point currentTime;
-
-public:
-    fpsCheck();
-
-    int GetFPS();       // Get fps: as a function of time difference between 2 frames
-};
+/*
+  // Eigen algebra library in progress...
 
 namespace EigenCG
 {
@@ -77,8 +72,6 @@ float radians(float sexagesimalDegrees);
 float * value_ptr(Eigen::Matrix4f matrix);
 
 } // EigenCG end
-
-
-
+*/
 
 #endif
