@@ -19,21 +19,18 @@ struct terrainData
     friend std::ostream& operator << (std::ostream& os, const terrainData& obj);    ///< Operator << overloading
 
     // Noise data   
-    FastNoiseLite::NoiseType    noiseType;
-    unsigned int                octaves;       // the bigger this is, the greater (x,y) computed for the highest octaves, which makes GetNoise(x,y) output -nan(ind)
-    float                       lacunarity;
-    float                       persistance;
-    float                       scale;
-    float                       multiplier;
-    unsigned int                seed;
-    float                       offset[2];
+    FastNoiseLite::NoiseType    noiseType;      ///< Enum (FastNoiseLite::NoiseType): <ul> <li>FastNoiseLite::NoiseType_Value</li> <li>FastNoiseLite::NoiseType_ValueCubic</li> <li>FastNoiseLite::NoiseType_Perlin</li> <li>FastNoiseLite::NoiseType_Cellular</li> <li>FastNoiseLite::NoiseType_OpenSimplex2</li> <li>FastNoiseLite::NoiseType_OpenSimplex2S</li> </ul>
+    unsigned int                octaves;        ///< The bigger, the greater (x,y) computed for the highest octaves (exponential thanks to lacunarity), which has consequences: FastNoiseLite::GetNoise(x,y) output -nan(ind)
+    float                       lacunarity;     ///< Determines frequency for each octave
+    float                       persistance;    ///< Determines amplitude for each octave
+    float                       scale;          ///< The bigger, the closer to detail; the smaller, the further away
+    float                       multiplier;     ///< Increases height
+    unsigned int                seed;           ///< Used for generating different octaves (used if addRandomOffset==true)
+    float                       offset[2];      ///< Offset for all octaves
 
     // Others
     size_t                      dimensions[2];      ///< Dimensions of the map (terrain buffer)
     bool                        newConfig;          ///< Indicates whether the state has changed (used for recomputing and redrawing terrain)
-
-private:
-    //FastNoiseLite::NoiseType noiseTypeFN[6] = { FastNoiseLite::NoiseType_Value, FastNoiseLite::NoiseType_ValueCubic, FastNoiseLite::NoiseType_Perlin, FastNoiseLite::NoiseType_Cellular, FastNoiseLite::NoiseType_OpenSimplex2, FastNoiseLite::NoiseType_OpenSimplex2S };
 };
 
 std::ostream& operator << (std::ostream& os, const terrainData& obj);
