@@ -21,11 +21,15 @@ ADD_EXECUTABLE(${PROJECT_NAME}
 	src/shader.cpp
 	src/camera.cpp
 	src/geometry.cpp
+	src/myGUI.cpp
+	src/canvas.cpp
 
 	include/auxiliar.hpp
 	include/shader.hpp
 	include/camera.hpp
 	include/geometry.hpp
+	include/myGUI.hpp
+	include/canvas.hpp
 
 	shaders/vertexShader.vs
 	shaders/fragmentShader.fs

@@ -1,5 +1,6 @@
 Doxygen comments (including documenting files)
 Class encapsulation
+object data inside noiseSet
 
 Añadir nuevos mesh (axis, sun) usando el enum para identificarlos
 

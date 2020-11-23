@@ -3,6 +3,7 @@
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
 /// Camera movement type. Used for indicating movement direction in ProcessKeyboard()
 enum Camera_Movement { FORWARD, BACKWARD, LEFT, RIGHT };

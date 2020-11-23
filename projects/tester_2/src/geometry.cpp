@@ -7,7 +7,7 @@
 #include "glm/gtc/type_ptr.hpp"
 
 #include "geometry.hpp"
-
+/*
 // terrainData -----------------------------------------------------------------
 
 terrainData::terrainData()
@@ -84,38 +84,64 @@ std::ostream& operator << (std::ostream& os, const terrainData& obj)
 
     return os;
 }
-
+*/
 // noiseSet -----------------------------------------------------------------
 
-noiseSet::noiseSet(terrainData& td, bool addRandomOffset)
-    : noiseType(td.noiseType), numOctaves(td.octaves), lacunarity(td.lacunarity), persistance(td.persistance), scale(td.scale), multiplier(td.multiplier)
+noiseSet::noiseSet(
+                    unsigned int NumOctaves,
+                    float Lacunarity,
+                    float Persistance,
+                    float Scale,
+                    float Multiplier,
+                    float OffsetX,
+                    float OffsetY,
+                    FastNoiseLite::NoiseType NoiseType,
+                    bool addRandomOffset,
+                    unsigned int Seed)
 {
-    // unsigned int NumOctaves, float Lacunarity, float Persistance, float Scale, float Multiplier, unsigned int Seed, float (*Offset)[2], FastNoiseLite::NoiseType NoiseType
-    // td.octaves, td.lacunarity, td.persistance, td.scale, td.multiplier, td.seed, nullptr, td.noiseType[2]
+    // Set values
+    noiseType       = NoiseType;
+    numOctaves      = NumOctaves;
+    lacunarity      = Lacunarity;
+    persistance     = Persistance;
+    scale           = Scale;
+    multiplier      = Multiplier;
+    offsetX         = OffsetX;
+    offsetY         = OffsetY;
+    seed            = Seed;
+    octaveOffsets   = new float[numOctaves][2];
 
-    if(scale <= 0) scale = 0.001f;
 
-    // set noise type
+    // Clamp values
+    if(lacunarity < 1) lacunarity  = 1;
+    if(persistance < 0) persistance = 0;
+    else
+        if (persistance > 1) persistance = 1;
+    if(scale <= 0) scale = 0.01f;
+
+    // Set noise type
     noise.SetNoiseType(noiseType);
 
-    // set offsets for each octave
-    std::mt19937_64 engine;
-    engine.seed(td.seed);
-    std::uniform_int_distribution<int> distribution(-10000, 10000);
-
-    octaveOffsets = std::vector<float[2]>(numOctaves);
-    for(size_t i = 0; i < numOctaves; i++)
+    // Set offsets for each octave
+    if(addRandomOffset)
     {
-        if(addRandomOffset)
-        {
-            octaveOffsets[i][x] = distribution(engine) + td.offset[x];
-            octaveOffsets[i][y] = distribution(engine) + td.offset[y];
-        }
-        else {
-            octaveOffsets[i][x] = td.offset[x];
-            octaveOffsets[i][y] = td.offset[y];
-        }
+        std::mt19937_64 engine;
+        engine.seed(seed);
+        std::uniform_int_distribution<int> distribution(-10000, 10000);
 
+        for(size_t i = 0; i < numOctaves; i++)
+        {
+            octaveOffsets[i][0] = distribution(engine) + offsetX;
+            octaveOffsets[i][1] = distribution(engine) + offsetY;
+        }
+    }
+    else
+    {
+        for(size_t i = 0; i < numOctaves; i++)
+        {
+            octaveOffsets[i][0] = offsetX;
+            octaveOffsets[i][1] = offsetY;
+        }
     }
 
     // get extreme value
@@ -131,8 +157,57 @@ noiseSet::noiseSet(terrainData& td, bool addRandomOffset)
 
     extreme *= scale * multiplier;
 }
+/*
+noiseSet::noiseSet(const noiseSet& obj)
+{
+    noise = obj.noise;
+    noiseType = obj.noiseType;
+    numOctaves = obj.numOctaves;
+    lacunarity = obj.lacunarity;
+    persistance = obj.persistance;
+    scale = obj.scale;
+    multiplier = obj.multiplier;
 
-float noiseSet::GetNoise(float X, float Y, bool includeOffset)
+    for(size_t i = 0; i < numOctaves; i++)
+    {
+        octaveOffsets[i][0] = obj.octaveOffsets[i][0];
+        octaveOffsets[i][1] = obj.octaveOffsets[i][1];
+    }
+}
+
+bool noiseSet::operator== (noiseSet& obj)
+{
+    if( noiseType != obj.noiseType ||
+        numOctaves != obj.numOctaves ||
+        lacunarity != obj.lacunarity ||
+        persistance != obj.persistance ||
+        scale != obj.scale ||
+        multiplier != obj.multiplier)
+        return false;
+
+    for(size_t i = 0; i < numOctaves; i++)
+    {
+        if( octaveOffsets[i][0] != obj.octaveOffsets[i][0] ||
+            octaveOffsets[i][1] != obj.octaveOffsets[i][1])
+            return false;
+    }
+
+    return true;
+}
+
+std::ostream& operator << (std::ostream& os, const noiseSet& obj)
+{
+    os << "\n----------"
+       << "\nNoise type: "   << obj.noiseType
+       << "\nNum. octaves: " << obj.numOctaves
+       << "\nLacunarity: "   << obj.lacunarity
+       << "\nPersistance: "  << obj.persistance
+       << "\nScale: "        << obj.scale
+       << "\nMultiplier: "   << obj.multiplier
+       << std::endl;
+}
+*/
+float                 noiseSet::GetNoise(float X, float Y, bool includeOffset)
 {
     float result = 0;
     float frequency = 1, amplitude = 1;
@@ -141,11 +216,11 @@ float noiseSet::GetNoise(float X, float Y, bool includeOffset)
     {
         if (includeOffset)
         {
-            X = X / scale * frequency + octaveOffsets[i][x];
-            Y = Y / scale * frequency + octaveOffsets[i][y];
+            X = X / scale * frequency + octaveOffsets[i][0];
+            Y = Y / scale * frequency + octaveOffsets[i][1];
         }
         else
-        { 
+        {
             X = X / scale * frequency;
             Y = Y / scale * frequency;
         }
@@ -159,46 +234,113 @@ float noiseSet::GetNoise(float X, float Y, bool includeOffset)
     return result * scale * multiplier;
 }
 
-float noiseSet::GetExtreme() { return extreme; };
+float                 noiseSet::getExtreme() const { return extreme; };
+
+unsigned              noiseSet::getNoiseType()      const { return noiseType; };
+unsigned              noiseSet::getNumOctaves()     const { return numOctaves; };
+float                 noiseSet::getLacunarity()     const { return lacunarity; };
+float                 noiseSet::getPersistance()    const { return persistance; };
+float                 noiseSet::getScale()          const { return scale; };
+float                 noiseSet::getMultiplier()     const { return multiplier; };
+float                 noiseSet::getOffsetX()        const { return offsetX; }
+float                 noiseSet::getOffsetY()        const { return offsetY; }
+unsigned int          noiseSet::getSeed()           const { return seed; }
+float*                noiseSet::getOffsets()        const { return &octaveOffsets[0][0]; };
 
 // terrainGenerator -----------------------------------------------------------------
 
-terrainGenerator::terrainGenerator()
+terrainGenerator::terrainGenerator(noiseSet &noise, unsigned dimensionX, unsigned dimensionY)
 {
-    terrainData td;
-    computeTerrain(td);
+    Xside = 0;
+    Yside = 0;
+
+    computeTerrain(noise, dimensionX, dimensionY);
+}
+/*
+terrainGenerator::terrainGenerator(const terrainGenerator& obj)
+{
+    Xside = obj.Xside;
+    Yside = obj.Yside;
+
+    totalVert = obj.totalVert;
+    totalVertUsed = obj.totalVertUsed;
+
+    delete[] field;
+    field = new float[totalVert][11];
+    for(size_t i = 0; i < totalVert; i++)
+    {
+        for(int j = 0; j < 11; j++)
+            field[i][j] = obj.field[i][j];
+    }
+
+    delete[] indices;
+    indices = new unsigned int[totalVertUsed/3][3];
+    for(size_t i = 0; i < totalVertUsed; i++)
+    {
+        indices[i][0] = obj.indices[i][0];
+        indices[i][1] = obj.indices[i][1];
+        indices[i][2] = obj.indices[i][2];
+    }
 }
 
+bool terrainGenerator::operator== (terrainGenerator& obj)
+{
+    if( Xside == obj.Xside &&
+        Yside == obj.Yside &&
+        totalVert == obj.totalVert &&
+        totalVertUsed == obj.totalVertUsed)
+        return true;
+    else
+        return false;
+}
+
+std::ostream& operator << (std::ostream& os, const terrainGenerator& obj)
+{
+    unsigned Xside = obj.Xside;
+    unsigned Yside = obj.Yside;
+
+    os << "Side: " << Xside << " x " << Yside << std::endl;
+    os << "Drawn vertices: " << obj.totalVertUsed << std::endl;
+
+    os << "Vertices: " << std::endl;
+    for(size_t y = Yside-1; y < Yside; y--)
+    {
+        for(size_t x = 0; x < Xside; x++)
+            os << "(" << obj.field[obj.getPos(x, y)][0] << ", " << obj.field[obj.getPos(x, y)][1] << ") ";
+        os << std::endl;
+    }
+
+    os << "Indices: " << std::endl;
+    for(size_t i = 0; i < obj.totalVertUsed/3; i++)
+        os << obj.indices[i][0] << ", " << obj.indices[i][1] << ", " << obj.indices[i][2] << std::endl;
+}
+*/
 terrainGenerator::~terrainGenerator()
 {
     delete[] field;
     delete[] indices;
 }
 
-void terrainGenerator::computeTerrain(terrainData &td)
+void terrainGenerator::computeTerrain(noiseSet &noise, unsigned dimensionX, unsigned dimensionY)
 {
-    noiseSet noise(td, false);
-
-    size_t siz[2] = { td.dimensions[0], td.dimensions[1] };
-
-    if (siz[0] != side[0] || siz[0] != side[1])
+    if (dimensionX != Xside || dimensionY != Yside)
     {
-        side[0] = siz[0];
-        side[1] = siz[1];
-        totalVert = side[0] * side[1];
-        totalVertUsed = (side[0] - 1) * (side[1] - 1) * 2 * 3;
+        Xside = dimensionX;
+        Yside = dimensionY;
+        totalVert = Xside * Yside;
+        totalVertUsed = (Xside - 1) * (Yside - 1) * 2 * 3;
 
         delete[] field;
         field = new float[totalVert][11];
         delete[] indices;
-        indices = new unsigned int[totalVertUsed / 3][3];
+        indices = new unsigned int[totalVertUsed/3][3];
     }
 
     float textureFactor = 0.1;
 
     // Vertex data
-    for (size_t y = 0; y < side[1]; y++)
-        for (size_t x = 0; x < side[0]; x++)
+    for (size_t y = 0; y < Yside; y++)
+        for (size_t x = 0; x < Xside; x++)
         {
             size_t pos = getPos(x, y);
 
@@ -227,8 +369,8 @@ void terrainGenerator::computeTerrain(terrainData &td)
     for (size_t i = 0; i < totalVert; i++)
         tempNormals[i] = glm::vec3(0.f, 0.f, 0.f);
 
-    for (size_t y = 0; y < side[1] - 1; y++)            // Compute normals
-        for (size_t x = 0; x < side[0] - 1; x++)
+    for (size_t y = 0; y < Yside - 1; y++)            // Compute normals
+        for (size_t x = 0; x < Xside - 1; x++)
         {
             /*
                            Cside
@@ -274,36 +416,69 @@ void terrainGenerator::computeTerrain(terrainData &td)
     // Indices
     size_t index = 0;
 
-    for (size_t y = 0; y < side[1] - 1; y++)
-        for (size_t x = 0; x < side[0] - 1; x++)
+    for (size_t y = 0; y < Yside - 1; y++)
+        for (size_t x = 0; x < Xside - 1; x++)
         {
             unsigned int pos = getPos(x, y);
 
             indices[index][0] = pos;
-            indices[index][1] = pos + side[0] + 1;
-            indices[index++][2] = pos + side[0];
+            indices[index][1] = pos + Xside + 1;
+            indices[index++][2] = pos + Xside;
             indices[index][0] = pos;
             indices[index][1] = pos + 1;
-            indices[index++][2] = pos + side[0] + 1;
+            indices[index++][2] = pos + Xside + 1;
         }
 }
 
-void terrainGenerator::printData()
+size_t terrainGenerator::getPos(size_t x, size_t y) const { return y * Xside + x; }
+
+unsigned terrainGenerator::getXside() const { return Xside; }
+
+unsigned terrainGenerator::getYside() const { return Yside; }
+
+// ----------------------------------------------------------------------------------
+
+void fillAxis(float array[12][3], float sizeOfAxis)
 {
-    std::cout << "Side: " << side[0] << " x " << side[1] << std::endl;
-    std::cout << "Drawn vertices: " << totalVertUsed << std::endl;
+    array[0][0] = 0.f;  // First vertex
+    array[0][1] = 0.f;
+    array[0][2] = 0.f;
+    array[1][0] = 1.f;  // Color
+    array[1][1] = 0.f;
+    array[1][2] = 0.f;
 
-    std::cout << "Vertices: " << std::endl;
-    for(size_t y = side[1]-1; y < side[1]; y--)
-    {
-        for(size_t x = 0; x < side[0]; x++)
-            std::cout << "(" << field[getPos(x, y)][0] << ", " << field[getPos(x, y)][1] << ") ";
-        std::cout << std::endl;
-    }
+    array[2][0] = sizeOfAxis;
+    array[2][1] = 0.f;
+    array[2][2] = 0.f;
+    array[3][0] = 1.f;
+    array[3][1] = 0.f;
+    array[3][2] = 0.f;
 
-    std::cout << "Indices: " << std::endl;
-    for(size_t i = 0; i < totalVertUsed/3; i++)
-        std::cout << indices[i][0] << ", " << indices[i][1] << ", " << indices[i][2] << std::endl;
+    array[4][0] = 0.f;
+    array[4][1] = 0.f;
+    array[4][2] = 0.f;
+    array[5][0] = 0.f;
+    array[5][1] = 1.f;
+    array[5][2] = 0.f;
+
+    array[6][0] = 0.f;
+    array[6][1] = sizeOfAxis;
+    array[6][2] = 0.f;
+    array[7][0] = 0.f;
+    array[7][1] = 1.f;
+    array[7][2] = 0.f;
+
+    array[8][0] = 0.f;
+    array[8][1] = 0.f;
+    array[8][2] = 0.f;
+    array[9][0] = 0.f;
+    array[9][1] = 0.f;
+    array[9][2] = 1.f;
+
+    array[10][0] = 0.f;
+    array[10][1] = 0.f;
+    array[10][2] = sizeOfAxis;
+    array[11][0] = 0.f;
+    array[11][1] = 0.f;
+    array[11][2] = 1.f;
 }
-
-size_t terrainGenerator::getPos(size_t x, size_t y) { return y * side[0] + x; }

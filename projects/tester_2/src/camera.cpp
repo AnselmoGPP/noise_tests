@@ -1,7 +1,7 @@
-#include "camera.hpp"
-#include "glad/glad.h"
-#include <iostream>
 
+#include <iostream>
+#include "glad/glad.h"
+#include "camera.hpp"
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
     : Front(glm::vec3(1.0f, 0.0f, 0.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), scrollSpeed(SCROLLSPEED), fov(FOV)

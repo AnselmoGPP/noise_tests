@@ -12,19 +12,16 @@
 #include "glad/glad.h"
 #endif
 #include "GLFW/glfw3.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
-#include "imgui.h"
-#include "examples/imgui_impl_glfw.h"
-#include "examples/imgui_impl_opengl3.h"
 
 #include "auxiliar.hpp"
 #include "camera.hpp"
 #include "shader.hpp"
 #include "geometry.hpp"
+#include "myGUI.hpp"
+#include "canvas.hpp"
 
 // Function declarations --------------------
 
@@ -32,11 +29,12 @@ void framebuffer_resize_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-
 void processInput(GLFWwindow *window);
 
 void GUI_terrainConfig();
 void printOGLdata();
+
+void setUniforms(Shader &myProgram, unsigned texture1);
 
 // Settings (typedef and global data section) --------------------
 
@@ -64,8 +62,9 @@ const size_t numBuffers = 2;
 enum VBO { terr, axis };
 
 // Terrain data (for GUI)
-terrainData terrConf, temp;
-terrainGenerator terraform;
+noiseSet noise;
+terrainGenerator terrain(noise, 128, 128);
+bool newTerrain = true;
 
 
 // Function definitions --------------------
@@ -142,35 +141,20 @@ int main()
     //            "../../../code/tester/shaders/lightSourceFragS.fs" );
 
     // ----- Set up vertex data, buffers, and configure vertex attributes
-    terraform.computeTerrain(terrConf);
-    terrConf.newConfig = false;
 
-    unsigned int fieldVAO, VBO, EBO;
-    glGenVertexArrays(1, &fieldVAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
+    // Terrain creation
+    terrain.computeTerrain(noise, 128, 128);
 
-    glBindVertexArray(fieldVAO);
+    unsigned int VAO = createVAO();
+    unsigned int VBO = createVBO(sizeof(float)*terrain.totalVert*11, terrain.field, GL_STATIC_DRAW);
+    unsigned int EBO = createEBO(sizeof(unsigned int)*terrain.totalVertUsed, terrain.indices, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*terraform.totalVert*11, terraform.field, GL_STATIC_DRAW);  // GL_DYNAMIC_DRAW, GL_STATIC_DRAW, GL_STREAM_DRAW
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*terraform.totalVertUsed, terraform.indices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)nullptr);              // position attribute
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)(3 * sizeof(float)));  // color attribute
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6 * sizeof(float)));   // texture coords
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8 * sizeof(float)));   // normals coords
-    glEnableVertexAttribArray(3);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);           // unbind VBO (not usual)
-    glBindVertexArray(0);                       // unbind VAO (not usual)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);   // unbind EBO
+    int sizes[4] = { 3, 3, 2, 3 };
+    configVAO(VAO, VBO, EBO, sizes, 4);
 
     // Axis
+    float coordSys[12][3];
+    fillAxis(coordSys, 100);
     unsigned int axisVAO, axisVBO;
     glGenVertexArrays(1, &axisVAO);
     glGenVertexArrays(1, &axisVBO);
@@ -185,31 +169,7 @@ int main()
 */
 
     // ----- Load and create a texture
-    unsigned texture1, texture2;
-    int width, height, numberChannels;
-    unsigned char *image;
-
-    stbi_set_flip_vertically_on_load(true);
-
-    // Texture 1
-    glGenTextures(1, &texture1);
-    glBindTexture(GL_TEXTURE_2D, texture1);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);       // Texture wrapping
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);               // GL_REPEAT  GL_MIRRORED_REPEAT  GL_CLAMP_TO_EDGE  GL_CLAMP_TO_BORDER
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);   // Texture filtering (?)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);           // GL_LINEAR  GL_NEAREST
-
-    image = stbi_load("../../../textures/grass2.png", &width, &height, &numberChannels, 0);
-    if(image)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, (numberChannels == 4? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else std::cout << "Failed to load texture" << std::endl;
-
-    stbi_image_free(image);
+    unsigned texture1 = createTexture2D("../../../textures/grass2.png", GL_RGB);
 
 /*
     // Texture 2
@@ -239,6 +199,7 @@ int main()
     //glUniform1i(glGetUniformLocation(myProgram.ID, "texture2"), 1);
 
     // ----- GUI (1) Initialization
+    /*
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
@@ -247,8 +208,10 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     const char* glsl_version = "#version 330";
     ImGui_ImplOpenGL3_Init(glsl_version);
-
+*/
     // ----- Other operations
+
+    myGUI gui(window);
 
     timer.startTime();
     
@@ -266,65 +229,29 @@ int main()
         glClearColor(0.0f, 0.242f, 0.391f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);           // GL_STENCIL_BUFFER_BIT
         
-        // GUI (2) Configuration & Mouse check
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        //ImGui::ShowTestWindow();
-        //ImGui::ShowDemoWindow();
+        // GUI
+        gui.implement_NewFrame();
         GUI_terrainConfig();
+        mouseOverGUI = gui.cursorOverGUI();
 
-        mouseOverGUI = io.WantCaptureMouse;   // io.WantCaptureMouse and io.WantCaptureKeyboard flags are true if dear imgui wants to use our inputs (i.e. cursor is hovering a window). Another option: Set io.MousePos and call ImGui::IsMouseHoveringAnyWindow()
-        
-        // Uniforms (fragment shader)
-        myProgram.UseProgram();
-        myProgram.setVec3("objectColor", 0.1f, 0.6f, 0.1f);
-        myProgram.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
-        myProgram.setVec3("lightPos", lightPos);
-        myProgram.setVec3("lightDir", lightDir);
-        myProgram.setVec3("camPos", cam.Position);
-
-        // Textures
-        glActiveTexture(GL_TEXTURE0);               // Bind textures on corresponding texture unit
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        //glActiveTexture(GL_TEXTURE1);
-        //glBindTexture(GL_TEXTURE_2D, texture2);
-
-        // Uniforms (vertex shader)
-        myProgram.UseProgram();
-
-        glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
-        myProgram.setMat4("projection", projection);
-
-        glm::mat4 view = cam.GetViewMatrix();
-        myProgram.setMat4("view", view);
-
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-        model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-        myProgram.setMat4("model", model);
-
-        glm::mat3 normalMatrix = glm::mat3( glm::transpose(glm::inverse(model)) );      // Used when the model matrix applies non-uniform scaling (normal won't be scaled correctly). Otherwise, use glm::vec3(model)
-        myProgram.setMat3("normalMatrix", normalMatrix);
+        // Uniforms
+        setUniforms(myProgram, texture1);
 
         // Redraw terrain
-        if(terrConf.newConfig)
+        if(newTerrain)
         {
-            terraform.computeTerrain(terrConf);
-
-            glBindVertexArray(fieldVAO);
+            glBindVertexArray(VAO);
 
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(float)*terraform.totalVert*11, terraform.field, GL_STATIC_DRAW);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(float)*terrain.totalVert*11, terrain.field, GL_STATIC_DRAW);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * terraform.totalVertUsed, terraform.indices, GL_STATIC_DRAW);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * terrain.totalVertUsed, terrain.indices, GL_STATIC_DRAW);
 
-            terrConf.newConfig = false;
+            newTerrain = false;
         }
 
-        glBindVertexArray(fieldVAO);
-        glDrawElements(GL_TRIANGLES, terraform.totalVertUsed, GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, terrain.totalVertUsed, GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
 
         /*
         glBindVertexArray(VAO);
@@ -357,9 +284,8 @@ int main()
         glBindVertexArray(lightSourceVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 */
-        // GUI (3) Rendering
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // GUI
+        gui.render();
 
         // ----------------------------------
         // ----------------------------------
@@ -374,24 +300,22 @@ int main()
 
     // ----- De-allocate all resources
 
-    glDeleteVertexArrays(1, &fieldVAO);
+    glDeleteVertexArrays(1, &VAO);
     //glDeleteVertexArrays(1, &lightSourceVAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
     glDeleteProgram(myProgram.ID);
     //glDeleteProgram(lightSourceProgram.ID);
     
-    // GUI (4) Resource deallocation
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    // GUI
+    gui.cleanup();
     
     glfwTerminate();
 
     return 0;
 }
 
-// -----------------------------------------------------------------------------------
+// Event handling --------------------------------------------------------------------
 
 // GLFW: whenever the window size changed (by OS or user resize) this callback function executes
 void framebuffer_resize_callback(GLFWwindow* window, int width, int height)
@@ -464,7 +388,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     }
 }
 
-// Others ----------------------------------
+// Others ----------------------------------------------------------------------------
 
 void printOGLdata()
 {
@@ -483,6 +407,7 @@ void printOGLdata()
 
 void GUI_terrainConfig()
 {
+    /*
     temp = terrConf;
 
     // Temporal types
@@ -495,6 +420,21 @@ void GUI_terrainConfig()
     int seed        = (int)terrConf.seed;
     int offsetX     = (int)terrConf.offset[0];
     int offsetY     = (int)terrConf.offset[1];
+*/
+
+    int dimensionX      = terrain.getXside();
+    int dimensionY      = terrain.getYside();
+
+    const char* noiseTypeString[6] = { "OpenSimplex2", "OpenSimplex2S", "Cellular", "Perlin", "ValueCubic", "Value" };
+    int noiseType       = noise.getNoiseType();
+    int numOctaves      = noise.getNumOctaves();
+    float lacunarity    = noise.getLacunarity();
+    float persistance   = noise.getPersistance();
+    float scale         = noise.getScale();
+    int multiplier      = noise.getMultiplier();
+    int offsetX         = noise.getOffsetX();
+    int offsetY         = noise.getOffsetY();
+    int seed            = noise.getSeed();
 
     // Window
     ImGui::Begin("Noise configuration");
@@ -504,10 +444,10 @@ void GUI_terrainConfig()
     ImGui::SliderInt("Y dimension", &dimensionY, 2, 256);
     ImGui::Text("Noise configuration: ");
     ImGui::Combo("Noise type", &noiseType, noiseTypeString, IM_ARRAYSIZE(noiseTypeString));
-    ImGui::SliderInt("Octaves", &octaves, 1, 10);
-    ImGui::SliderFloat("Lacunarity", &terrConf.lacunarity, 1.0f, 2.5f);
-    ImGui::SliderFloat("Persistance", &terrConf.persistance, 0.0f, 1.0f);
-    ImGui::SliderFloat("Scale", &terrConf.scale, 0.001f, 1.0f);
+    ImGui::SliderInt("Octaves", &numOctaves, 1, 10);
+    ImGui::SliderFloat("Lacunarity", &lacunarity, 1.0f, 2.5f);
+    ImGui::SliderFloat("Persistance", &persistance, 0.0f, 1.0f);
+    ImGui::SliderFloat("Scale", &scale, 0.01f, 1.0f);
     ImGui::SliderInt("Multiplier", &multiplier, 1, 100);
     ImGui::Text("Map selection: ");
     ImGui::SliderInt("Seed", &seed, 0, 100000);
@@ -519,7 +459,29 @@ void GUI_terrainConfig()
     ImGui::End();
 
     // Types conversion
-    terrConf.dimensions[0] = (size_t)dimensionX;
+    if( dimensionX != terrain.getXside() ||
+        dimensionY != terrain.getYside() ||
+        noiseType != noise.getNoiseType() ||
+        numOctaves != noise.getNumOctaves() ||
+        lacunarity != noise.getLacunarity() ||
+        persistance != noise.getPersistance() ||
+        scale != noise.getScale() ||
+        multiplier != noise.getMultiplier() ||
+        offsetX != noise.getOffsetX() ||
+        offsetY != noise.getOffsetY() ||
+        seed != noise.getSeed()
+      )
+    {
+        newTerrain = true;
+
+        noiseSet newNoise((unsigned)numOctaves, lacunarity, persistance, scale, multiplier, offsetX, offsetY, (FastNoiseLite::NoiseType)noiseType, false, (unsigned)seed);
+        noise = newNoise;
+
+        terrain.computeTerrain(noise, dimensionX, dimensionY);
+    }
+
+
+/*    terrConf.dimensions[0] = (size_t)dimensionX;
     terrConf.dimensions[1] = (size_t)dimensionY;
     terrConf.noiseType = (FastNoiseLite::NoiseType)noiseType;
     terrConf.octaves = (unsigned int)octaves;
@@ -527,8 +489,43 @@ void GUI_terrainConfig()
     terrConf.seed = (unsigned int)seed;
     terrConf.offset[0] = (float)offsetX;
     terrConf.offset[1] = (float)offsetY;
-
+*/
     // Flag for drawing the terrain again  because data changed
-    if (terrConf != temp)
-        terrConf.newConfig = true;
+    //if (terrConf != temp)
+    //    terrConf.newConfig = true;
+}
+
+void setUniforms(Shader &myProgram, unsigned texture1)
+{
+    myProgram.UseProgram();
+
+    // Fragment shader uniforms
+    myProgram.setVec3("objectColor", 0.1f, 0.6f, 0.1f);
+    myProgram.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
+    myProgram.setVec3("lightPos", lightPos);
+    myProgram.setVec3("lightDir", lightDir);
+    myProgram.setVec3("camPos", cam.Position);
+
+    // Textures uniforms
+    glActiveTexture(GL_TEXTURE0);               // Bind textures on corresponding texture unit
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    //glActiveTexture(GL_TEXTURE1);
+    //glBindTexture(GL_TEXTURE_2D, texture2);
+
+    // Vertex shader uniforms
+    glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
+    myProgram.setMat4("projection", projection);
+
+    glm::mat4 view = cam.GetViewMatrix();
+    myProgram.setMat4("view", view);
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+    myProgram.setMat4("model", model);
+
+    glm::mat3 normalMatrix = glm::mat3( glm::transpose(glm::inverse(model)) );      // Used when the model matrix applies non-uniform scaling (normal won't be scaled correctly). Otherwise, use glm::vec3(model)
+    myProgram.setMat3("normalMatrix", normalMatrix);
+
 }
