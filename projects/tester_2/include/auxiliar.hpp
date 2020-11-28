@@ -19,13 +19,13 @@
  */
 class timerSet
 {
-    std::chrono::high_resolution_clock::time_point timeZero;        ///< Initial time
-    std::chrono::high_resolution_clock::time_point lastTime;        ///< Last registered time. Updated in computeDeltaTime()
-    long double lastTimeSeconds;
-    long double deltaTime;
+    std::chrono::high_resolution_clock::time_point timeZero;    ///< Initial time
+    std::chrono::high_resolution_clock::time_point lastTime;    ///< Last registered time. Updated in computeDeltaTime()
+    long double lastTimeSeconds;                                ///< lastTime value in seconds
+    long double deltaTime;                                      ///< Different between the last two frames. Updated in computeDeltaTime()
 
-    int FPS;
-    int maxFPS;
+    int FPS;                                                    ///< Frames Per Second. Updated int computeDeltaTime()
+    int maxFPS;                                                 ///< Maximum number of fps
 
     size_t frameCounter;
 

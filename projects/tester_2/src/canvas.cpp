@@ -26,7 +26,7 @@ unsigned int createVBO(unsigned long num_bytes, void* pointerToData, int GL_XXX_
     unsigned int VBO;
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, num_bytes, pointerToData, GL_XXX_DRAW);  // GL_DYNAMIC_DRAW, GL_STATIC_DRAW, GL_STREAM_DRAW
+    glBufferData(GL_ARRAY_BUFFER, num_bytes, pointerToData, GL_XXX_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     return VBO;
@@ -45,14 +45,17 @@ unsigned int createEBO(unsigned long num_bytes, void* pointerToData, int GL_XXX_
 
 void configVAO(unsigned VAO, unsigned VBO, unsigned EBO, int *sizes, unsigned numAtribs)
 {
+    // Get stride
     int totalSize = 0;
     for(unsigned i = 0; i < numAtribs; i++) totalSize += sizes[i];
     int stride = totalSize * sizeof(float);
 
+    // Bind buffers
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
+    // Specify pointers
     int pointer = 0;
     for(unsigned i = 0; i < numAtribs; i++)
     {
@@ -62,29 +65,36 @@ void configVAO(unsigned VAO, unsigned VBO, unsigned EBO, int *sizes, unsigned nu
         pointer += sizes[i];
     }
 
+    // Unbind buffer
     glBindBuffer(GL_ARRAY_BUFFER, 0);           // unbind VBO (not usual)
     glBindVertexArray(0);                       // unbind VAO (not usual)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);   // unbind EBO
 }
 
-void configVAO2(unsigned VAO, unsigned VBO, unsigned EBO)
+void configVAO(unsigned VAO, unsigned VBO, int* sizes, unsigned numAtribs)
 {
+    // Get stride
+    int totalSize = 0;
+    for (unsigned i = 0; i < numAtribs; i++) totalSize += sizes[i];
+    int stride = totalSize * sizeof(float);
+
+    // Bind buffers
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)nullptr);              // position attribute
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)(3 * sizeof(float)));  // color attribute
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6 * sizeof(float)));   // texture coords
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8 * sizeof(float)));   // normals coords
-    glEnableVertexAttribArray(3);
+    // Specify pointers
+    int pointer = 0;
+    for (unsigned i = 0; i < numAtribs; i++)
+    {
+        glVertexAttribPointer(i, sizes[i], GL_FLOAT, GL_FALSE, stride, (void*)(pointer * sizeof(float)));
+        glEnableVertexAttribArray(i);
 
+        pointer += sizes[i];
+    }
+
+    // Unbind buffers
     glBindBuffer(GL_ARRAY_BUFFER, 0);           // unbind VBO (not usual)
     glBindVertexArray(0);                       // unbind VAO (not usual)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);   // unbind EBO
 }
 
 unsigned createTexture2D(const char *fileAddress, int internalFormat)

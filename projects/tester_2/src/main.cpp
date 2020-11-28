@@ -22,6 +22,7 @@
 #include "geometry.hpp"
 #include "myGUI.hpp"
 #include "canvas.hpp"
+#include "parameters.hpp"
 
 // Function declarations --------------------
 
@@ -34,38 +35,9 @@ void processInput(GLFWwindow *window);
 void GUI_terrainConfig();
 void printOGLdata();
 
-void setUniforms(Shader &myProgram, unsigned texture1);
-
-// Settings (typedef and global data section) --------------------
-
-// window size
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
-
-// camera
-Camera cam(glm::vec3(64.0f, -30.0f, 90.0f));
-float lastX =  SCR_WIDTH  / 2.0;
-float lastY =  SCR_HEIGHT / 2.0;
-bool firstMouse = true;
-bool LMBpressed = false;
-bool mouseOverGUI = false;
-
-// timing
-timerSet timer(30);
-
-// lighting
-glm::vec3 lightPos(0.0f, 0.0f, 30.0f);
-glm::vec3 lightDir(-0.57735f, 0.57735f, 0.57735f);
-
-// buffers
-const size_t numBuffers = 2;
-enum VBO { terr, axis };
-
-// Terrain data (for GUI)
-noiseSet noise;
-terrainGenerator terrain(noise, 128, 128);
-bool newTerrain = true;
-
+void setUniforms(Shader &program, unsigned texture);
+void setUniformsAxis(Shader& program);
+void setUniformsWater(Shader& program);
 
 // Function definitions --------------------
 
@@ -126,51 +98,67 @@ int main()
     // ----- OGL general options
     printOGLdata();
 
-    glEnable(GL_DEPTH_TEST);
-    glFrontFace(GL_CCW);
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);    // Wireframe mode
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);    // Back to default
+    glEnable(GL_DEPTH_TEST);                            // Depth test (draw what is the front)
+    glFrontFace(GL_CCW);                                // Front face is drawn counterclock wise
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Wireframe mode
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);        // Back to default
 
-    // ----- Build and compile our shader program
-    Shader myProgram(
-                "../../../projects/tester_2/shaders/vertexShader.vs",
-                "../../../projects/tester_2/shaders/fragmentShader.fs" );
-
-    //Shader lightSourceProgram(
-    //            "../../../code/tester/shaders/vertexShader.vs",
-    //            "../../../code/tester/shaders/lightSourceFragS.fs" );
+    glEnable(GL_BLEND);                                 // Enable transparency
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Enable transparency
 
     // ----- Set up vertex data, buffers, and configure vertex attributes
 
-    // Terrain creation
+    // >>> Terrain
+
     terrain.computeTerrain(noise, 128, 128);
+
+    Shader terrProgram(
+        "../../../projects/tester_2/shaders/vertexShader.vs",
+        "../../../projects/tester_2/shaders/fragmentShader.fs");
 
     unsigned int VAO = createVAO();
     unsigned int VBO = createVBO(sizeof(float)*terrain.totalVert*11, terrain.field, GL_STATIC_DRAW);
     unsigned int EBO = createEBO(sizeof(unsigned int)*terrain.totalVertUsed, terrain.indices, GL_STATIC_DRAW);
 
-    int sizes[4] = { 3, 3, 2, 3 };
-    configVAO(VAO, VBO, EBO, sizes, 4);
+    int sizesAtribsTerrain[4] = { 3, 3, 2, 3 };
+    configVAO(VAO, VBO, EBO, sizesAtribsTerrain, 4);
 
-    // Axis
+    unsigned texture1 = createTexture2D("../../../textures/grass2.png", GL_RGB);
+    terrProgram.UseProgram();
+    terrProgram.setInt("texture1", 0);      // Tell OGL for each sampler to which texture unit it belongs to (only has to be done once)
+
+    // >>> Axis
+
     float coordSys[12][3];
-    fillAxis(coordSys, 100);
-    unsigned int axisVAO, axisVBO;
-    glGenVertexArrays(1, &axisVAO);
-    glGenVertexArrays(1, &axisVBO);
-/*
-    unsigned int lightSourceVAO;
-    glGenVertexArrays(1, &lightSourceVAO);
-    glBindVertexArray(lightSourceVAO);
+    fillAxis(coordSys, 128);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)nullptr);
-    glEnableVertexAttribArray(0);
-*/
+    Shader axisProg(
+        "../../../projects/tester_2/shaders/axis.vs",
+        "../../../projects/tester_2/shaders/axis.fs");
+
+    unsigned axisVAO = createVAO();
+    unsigned axisVBO = createVBO(sizeof(float) * 12 * 3, &coordSys[0][0], GL_STATIC_DRAW);
+
+    int sizesAtribsAxis[2] = { 3, 3 };
+    configVAO(axisVAO, axisVBO, sizesAtribsAxis, 2);
+
+    // >>> Water
+
+    Shader waterProg(
+        "../../../projects/tester_2/shaders/water.vs",
+        "../../../projects/tester_2/shaders/water.fs");
+
+    float water[6][10];
+    fillSea(water, seaLevel, 0, 0, 127, 127);
+
+    unsigned waterVAO = createVAO();
+    unsigned waterVBO = createVBO(sizeof(float) * 6 * 10, &water[0][0], GL_STATIC_DRAW);
+
+    int sizesAtribsWater[3] = { 3, 4, 3 };
+    configVAO(waterVAO, waterVBO, sizesAtribsWater, 3);
+
 
     // ----- Load and create a texture
-    unsigned texture1 = createTexture2D("../../../textures/grass2.png", GL_RGB);
-
 /*
     // Texture 2
     glGenTextures(1, &texture2);
@@ -193,22 +181,7 @@ int main()
     stbi_image_free(image);
 */
 
-    // Tell OGL for each sampler to which texture unit it belongs to (only has to be done once)
-    myProgram.UseProgram();
-    myProgram.setInt("texture1", 0);        //glUniform1i(glGetUniformLocation(myProgram.ID, "texture1"), 0);
-    //glUniform1i(glGetUniformLocation(myProgram.ID, "texture2"), 1);
 
-    // ----- GUI (1) Initialization
-    /*
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    ImGui::StyleColorsDark();                                   // ImGui::StyleColorsClassic();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    const char* glsl_version = "#version 330";
-    ImGui_ImplOpenGL3_Init(glsl_version);
-*/
     // ----- Other operations
 
     myGUI gui(window);
@@ -226,7 +199,7 @@ int main()
         // RENDERING ------------------------
         // ----------------------------------
 
-        glClearColor(0.0f, 0.242f, 0.391f, 1.0f);
+        glClearColor(0.0f, 0.24f, 0.39f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);           // GL_STENCIL_BUFFER_BIT
         
         // GUI
@@ -234,14 +207,10 @@ int main()
         GUI_terrainConfig();
         mouseOverGUI = gui.cursorOverGUI();
 
-        // Uniforms
-        setUniforms(myProgram, texture1);
-
-        // Redraw terrain
+        // >>> Terrain
         if(newTerrain)
         {
             glBindVertexArray(VAO);
-
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
             glBufferData(GL_ARRAY_BUFFER, sizeof(float)*terrain.totalVert*11, terrain.field, GL_STATIC_DRAW);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -250,8 +219,29 @@ int main()
             newTerrain = false;
         }
 
+        setUniforms(terrProgram, texture1);
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, terrain.totalVertUsed, GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // >>> Water
+        if(water[4][0] != terrain.getXside() || water[4][1] != terrain.getYside() || water[0][2] != seaLevel)
+        {
+            fillSea(water, seaLevel, 0., 0., terrain.getXside()-1, terrain.getYside()-1);
+
+            glBindVertexArray(waterVAO);
+            glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(float)*6*10, &water[0][0], GL_STATIC_DRAW);
+        }
+
+        setUniformsWater(waterProg);
+        glBindVertexArray(waterVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        // >>> Axis
+        setUniformsAxis(axisProg);
+        glBindVertexArray(axisVAO);
+        glDrawArrays(GL_LINES, 0, 6);
+
 
         /*
         glBindVertexArray(VAO);
@@ -301,11 +291,17 @@ int main()
     // ----- De-allocate all resources
 
     glDeleteVertexArrays(1, &VAO);
-    //glDeleteVertexArrays(1, &lightSourceVAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
-    glDeleteProgram(myProgram.ID);
-    //glDeleteProgram(lightSourceProgram.ID);
+    glDeleteProgram(terrProgram.ID);
+
+    glDeleteVertexArrays(1, &axisVAO);
+    glDeleteBuffers(1, &axisVBO);
+    glDeleteProgram(axisProg.ID);
+
+    glDeleteVertexArrays(1, &waterVAO);
+    glDeleteBuffers(1, &waterVBO);
+    glDeleteProgram(waterProg.ID);
     
     // GUI
     gui.cleanup();
@@ -407,21 +403,6 @@ void printOGLdata()
 
 void GUI_terrainConfig()
 {
-    /*
-    temp = terrConf;
-
-    // Temporal types
-    int dimensionX  = (int)terrConf.dimensions[0];
-    int dimensionY  = (int)terrConf.dimensions[1];
-    const char* noiseTypeString[6] = { "OpenSimplex2", "OpenSimplex2S", "Cellular", "Perlin", "ValueCubic", "Value" };
-    int noiseType   = (int)terrConf.noiseType;
-    int octaves     = (int)terrConf.octaves;
-    int multiplier  = (int)terrConf.multiplier;
-    int seed        = (int)terrConf.seed;
-    int offsetX     = (int)terrConf.offset[0];
-    int offsetY     = (int)terrConf.offset[1];
-*/
-
     int dimensionX      = terrain.getXside();
     int dimensionY      = terrain.getYside();
 
@@ -432,6 +413,7 @@ void GUI_terrainConfig()
     float persistance   = noise.getPersistance();
     float scale         = noise.getScale();
     int multiplier      = noise.getMultiplier();
+    int curveDegree     = noise.getCurveDegree();
     int offsetX         = noise.getOffsetX();
     int offsetY         = noise.getOffsetY();
     int seed            = noise.getSeed();
@@ -439,93 +421,124 @@ void GUI_terrainConfig()
     // Window
     ImGui::Begin("Noise configuration");
     //ImGui::Checkbox("Another Window", &show_another_window);
+
     ImGui::Text("Map dimensions:");
-    ImGui::SliderInt("X dimension", &dimensionX, 2, 256);
-    ImGui::SliderInt("Y dimension", &dimensionY, 2, 256);
+    ImGui::SliderInt("X dimension", &dimensionX, 1, 256);
+    ImGui::SliderInt("Y dimension", &dimensionY, 1, 256);
+
     ImGui::Text("Noise configuration: ");
     ImGui::Combo("Noise type", &noiseType, noiseTypeString, IM_ARRAYSIZE(noiseTypeString));
     ImGui::SliderInt("Octaves", &numOctaves, 1, 10);
     ImGui::SliderFloat("Lacunarity", &lacunarity, 1.0f, 2.5f);
     ImGui::SliderFloat("Persistance", &persistance, 0.0f, 1.0f);
     ImGui::SliderFloat("Scale", &scale, 0.01f, 1.0f);
-    ImGui::SliderInt("Multiplier", &multiplier, 1, 100);
+    ImGui::SliderInt("Multiplier", &multiplier, 1, 200);
+    ImGui::SliderInt("Curve degree", &curveDegree, 0, 10);
+
     ImGui::Text("Map selection: ");
     ImGui::SliderInt("Seed", &seed, 0, 100000);
     ImGui::SliderInt("X offset", &offsetX, -500, 500);
     ImGui::SliderInt("Y offset", &offsetY, -500, 500);
+
+    ImGui::Text("Water: ");
+    ImGui::SliderFloat("Sea level", &seaLevel, 0, 128);
+
+    ImGui::Text("Camera: ");
+    ImGui::SliderFloat("Speed", &cam.MovementSpeed, 0, 150);
+
     //ImGui::ColorEdit3("clear color", (float*)&clear_color);
     //if (ImGui::Button("Button")) counter++;  ImGui::SameLine();  ImGui::Text("counter = %d", counter);
     //ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::End();
 
     // Types conversion
-    if( dimensionX != terrain.getXside() ||
-        dimensionY != terrain.getYside() ||
-        noiseType != noise.getNoiseType() ||
-        numOctaves != noise.getNumOctaves() ||
-        lacunarity != noise.getLacunarity() ||
-        persistance != noise.getPersistance() ||
-        scale != noise.getScale() ||
-        multiplier != noise.getMultiplier() ||
-        offsetX != noise.getOffsetX() ||
-        offsetY != noise.getOffsetY() ||
-        seed != noise.getSeed()
-      )
+    noiseSet newNoise((unsigned)numOctaves, lacunarity, persistance, scale, multiplier, curveDegree, offsetX, offsetY, (FastNoiseLite::NoiseType)noiseType, false, (unsigned)seed);
+
+    if( noise != newNoise || dimensionX != terrain.getXside() ||  dimensionY != terrain.getYside() )
     {
-        newTerrain = true;
-
-        noiseSet newNoise((unsigned)numOctaves, lacunarity, persistance, scale, multiplier, offsetX, offsetY, (FastNoiseLite::NoiseType)noiseType, false, (unsigned)seed);
         noise = newNoise;
-
         terrain.computeTerrain(noise, dimensionX, dimensionY);
+        newTerrain = true;
     }
-
-
-/*    terrConf.dimensions[0] = (size_t)dimensionX;
-    terrConf.dimensions[1] = (size_t)dimensionY;
-    terrConf.noiseType = (FastNoiseLite::NoiseType)noiseType;
-    terrConf.octaves = (unsigned int)octaves;
-    terrConf.multiplier = (float)multiplier;
-    terrConf.seed = (unsigned int)seed;
-    terrConf.offset[0] = (float)offsetX;
-    terrConf.offset[1] = (float)offsetY;
-*/
-    // Flag for drawing the terrain again  because data changed
-    //if (terrConf != temp)
-    //    terrConf.newConfig = true;
 }
 
-void setUniforms(Shader &myProgram, unsigned texture1)
+void setUniforms(Shader &program, unsigned texture)
 {
-    myProgram.UseProgram();
+    program.UseProgram();
 
     // Fragment shader uniforms
-    myProgram.setVec3("objectColor", 0.1f, 0.6f, 0.1f);
-    myProgram.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
-    myProgram.setVec3("lightPos", lightPos);
-    myProgram.setVec3("lightDir", lightDir);
-    myProgram.setVec3("camPos", cam.Position);
+    program.setVec3("objectColor", 0.1f, 0.6f, 0.1f);
+    program.setVec3("lightColor",  lightCol);
+    program.setVec3("lightPos", lightPos);
+    program.setVec3("lightDir", lightDir);
+    program.setVec3("camPos", cam.Position);
 
     // Textures uniforms
     glActiveTexture(GL_TEXTURE0);               // Bind textures on corresponding texture unit
-    glBindTexture(GL_TEXTURE_2D, texture1);
+    glBindTexture(GL_TEXTURE_2D, texture);
     //glActiveTexture(GL_TEXTURE1);
     //glBindTexture(GL_TEXTURE_2D, texture2);
 
     // Vertex shader uniforms
     glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
-    myProgram.setMat4("projection", projection);
+    program.setMat4("projection", projection);
 
     glm::mat4 view = cam.GetViewMatrix();
-    myProgram.setMat4("view", view);
+    program.setMat4("view", view);
 
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
     model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
     model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-    myProgram.setMat4("model", model);
+    program.setMat4("model", model);
 
     glm::mat3 normalMatrix = glm::mat3( glm::transpose(glm::inverse(model)) );      // Used when the model matrix applies non-uniform scaling (normal won't be scaled correctly). Otherwise, use glm::vec3(model)
-    myProgram.setMat3("normalMatrix", normalMatrix);
-
+    program.setMat3("normalMatrix", normalMatrix);
 }
+
+void setUniformsAxis(Shader& program)
+{
+    program.UseProgram();
+
+    // Vertex shader uniforms
+    glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
+    program.setMat4("projection", projection);
+
+    glm::mat4 view = cam.GetViewMatrix();
+    program.setMat4("view", view);
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+    program.setMat4("model", model);
+}
+
+void setUniformsWater(Shader& program)
+{
+    program.UseProgram();
+
+    // Fragment shader uniforms
+    program.setVec3("lightColor", lightCol);
+    program.setVec3("lightPos", lightPos);
+    program.setVec3("lightDir", lightDir);
+    program.setVec3("camPos", cam.Position);
+
+    // Vertex shader uniforms
+    glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
+    program.setMat4("projection", projection);
+
+    glm::mat4 view = cam.GetViewMatrix();
+    program.setMat4("view", view);
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+    program.setMat4("model", model);
+
+    glm::mat3 normalMatrix = glm::mat3( glm::transpose(glm::inverse(model)) );      // Used when the model matrix applies non-uniform scaling (normal won't be scaled correctly). Otherwise, use glm::vec3(model)
+    program.setMat3("normalMatrix", normalMatrix);
+}
+
+

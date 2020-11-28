@@ -6,37 +6,21 @@
 
 #include "FastNoiseLite.h"
 
-// -----------------------------------------------------------------------------------
 /*
-/// Stores the configuration data that defines some terrain. Used in GUI and for drawing.
-struct terrainData
-{
-    // Constructors and operator overloading
-    terrainData();                                                                  ///< Default constructor. Configures a default terrain
-    terrainData(const terrainData& obj);                                            ///< Copy constructor
-    bool operator!= (terrainData& obj);                                             ///< Operator != overloading
-    friend std::ostream& operator << (std::ostream& os, const terrainData& obj);    ///< Operator << overloading
-
-    // Noise data   
-    FastNoiseLite::NoiseType    noiseType;      ///< Enum (FastNoiseLite::NoiseType): <ul> <li>FastNoiseLite::NoiseType_Value</li> <li>FastNoiseLite::NoiseType_ValueCubic</li> <li>FastNoiseLite::NoiseType_Perlin</li> <li>FastNoiseLite::NoiseType_Cellular</li> <li>FastNoiseLite::NoiseType_OpenSimplex2</li> <li>FastNoiseLite::NoiseType_OpenSimplex2S</li> </ul>
-    unsigned int                octaves;        ///< The bigger, the greater (x,y) computed for the highest octaves (exponential thanks to lacunarity), which has consequences: FastNoiseLite::GetNoise(x,y) output -nan(ind)
-    float                       lacunarity;     ///< Range: [1, inf]. Determines frequency for each octave. Increases number of small features.
-    float                       persistance;    ///< Range: [0, 1] Determines amplitude for each octave. Increases influence of small features.
-    float                       scale;          ///< The bigger, the closer to detail; the smaller, the further away
-    float                       multiplier;     ///< Increases height
-    unsigned int                seed;           ///< Used for generating different octaves (used if addRandomOffset==true)
-    float                       offset[2];      ///< Offset for all octaves
-
-    // Others
-    size_t                      dimensions[2];  ///< Dimensions of the map (terrain buffer)
-    bool                        newConfig;      ///< Indicates whether the state has changed (used for recomputing and redrawing terrain)
-};
-
-std::ostream& operator << (std::ostream& os, const terrainData& obj);
+*   @brief Computes the coherent noise value for certain 2D coordinates (x,y). Range = [0, maxHeight]
+* 
+*   Parameters used:
+*   <ul>
+*    <li>Noise type</li>
+*    <li>Number of octaves</li>
+*    <li>Lacunarity</li>
+*    <li>Persistance</li>
+*    <li>Scale</li>
+*    <li>Multiplier</li>
+*    <li>Offsets (one for X, other for Y)</li>
+*    <li>Seed (for adding random values to the offsets)</li>
+*   </ul>
 */
-// -----------------------------------------------------------------------------------
-
-/// Given some terrainData object, computes the heigth for certain (x,y) coordinates
 class noiseSet
 {
     FastNoiseLite noise;
@@ -47,59 +31,77 @@ class noiseSet
     float persistance;
     float scale;
     float multiplier;
+    unsigned curveDegree;
     float offsetX, offsetY;
     unsigned int seed;
     float (*octaveOffsets)[2];
 
-    float extreme;     // output range: [-extreme, extreme]
+    float maxHeight;
 
 public:
-    /*  Configure your noise generator:
-     *      NumOctaves: Number of octaves
-     *      Lacunarity: Should be in range [1, infinite]
-     *      Persistance: Should be in range [0, 1]
-     *      Scale: Scaling magnitude
-     *      Multiplier: The resulting noise value is multiplied by this
-     *      Seed: Generator's seed
-     *      Offset: Offset for each octave. Array[n][2]. If nullptr, it's automatically configured
-     *      NoiseType: FastNoiseLite::NoiseType_Perlin, FastNoiseLite::NoiseType_OpenSimplex2, etc.
-     */
-    noiseSet(unsigned int NumOctaves            = 6,
+    /*  @brief Constructor. Configure your noise generator:
+    *   @param NumOctaves Number of octaves.
+    *   @param Lacunarity Range [1, inf]. Determines the frequency.
+    *   @param Persistance Range [0, 1]. Determines the amplitude.
+    *   @param Scale Scaling magnitude.
+    *   @param Multiplier The resulting noise value is multiplied by this.
+    *   @param curveDegree Degree of the monomial (makes height difference progressive)
+    *   @param OffsetX Offset for the X coordinate.
+    *   @param OffsetY Offset for the Y coordinate.
+    *   @param NoiseType Noise type (example: FastnoiseLite::NoiseType_Perlin). Options: _OpenSimplex2, _OpenSimplex2S, _Cellular, _Perlin, _ValueCubic, _Value.
+    *   @param addRandomOffset Set to true if you want to add different random values (determined by seed) to each coordinate (x, y) in each octave.
+    *   @param Seed Determines the random value added to the offsets. Used only if addRandomOffset is true.
+    */
+    noiseSet(unsigned int NumOctaves            = 5,
              float Lacunarity                   = 1.5,
-             float Persistance                  = 0.5,
+             float Persistance                  = 0.3,
              float Scale                        = 1,
-             float Multiplier                   = 30,
+             float Multiplier                   = 50,
+             unsigned CurveDegree               = 0,
              float OffsetX                      = 0,
              float OffsetY                      = 0,
              FastNoiseLite::NoiseType NoiseType = FastNoiseLite::NoiseType_Perlin,
              bool addRandomOffset               = false,
              unsigned int Seed                  = 0);
+    ~noiseSet() = default;                                                      ///< Destructor
+    noiseSet(const noiseSet& obj);                                              ///< Copy constructor
+    bool operator != (noiseSet& obj);                                           ///< Operator != overloading
+    friend std::ostream& operator << (std::ostream& os, const noiseSet& obj);   ///< Operator << overloading
 
-    //noiseSet(const noiseSet& obj);
-    //bool operator== (noiseSet& obj);
-    //friend std::ostream& operator << (std::ostream& os, const noiseSet& obj);
+    /*
+    *   @brief Given xy coordinates, get the noise value
+    *   @param x X coordinate of noise
+    *   @param y Y coordinate of noise
+    *   @return Noise value
+    */
+    float GetNoise(float x, float y);
 
-    float                 GetNoise(float x, float y, bool includeOffset = false);
+    float           getMaxHeight() const;   ///< Get the maximum value that this noise can get. Noise range: [0, maxHeight]
 
-    float                 getExtreme() const;
+    unsigned        getNoiseType() const;   ///< Get noise type
+    unsigned        getNumOctaves() const;  ///< Get number of octaves
+    float           getLacunarity() const;  ///< Get lacunarity
+    float           getPersistance() const; ///< Get persistance
+    float           getScale() const;       ///< Get scale
+    float           getMultiplier() const;  ///< Get multiplier
+    float           getCurveDegree() const; ///< Get the degree of the monomial used
+    float           getOffsetX() const;     ///< Get the X offset
+    float           getOffsetY() const;     ///< Get the Y offset
+    unsigned int    getSeed() const;        ///< Get the seed
+    float*          getOffsets() const;     ///< Get an array with the offsets for each x and y coordinate of each octave
 
-    unsigned              getNoiseType() const;
-    unsigned              getNumOctaves() const;
-    float                 getLacunarity() const;
-    float                 getPersistance() const;
-    float                 getScale() const;
-    float                 getMultiplier() const;
-    float                 getOffsetX() const;
-    float                 getOffsetY() const;
-    unsigned int          getSeed() const;
-    float*                getOffsets() const;
+    /*
+     *  @brief Used for testing purposes. Checks the noise values for a size x size terrain and outputs the absolute maximum and minimum
+     *  @param size Size of one side of the square that will be tested
+     */
+    void noiseTester(size_t size);
 };
 
-//std::ostream& operator << (std::ostream& os, const noiseSet& obj);
+std::ostream& operator << (std::ostream& os, const noiseSet& obj);      ///< Operator << overloading for class noiseSet
 
 // -----------------------------------------------------------------------------------
 
-/// Given a terrainData object, uses noiseSet for building a complete terrain buffer
+/// Given a noiseSet object, and the xy dimensions, generates a terrain buffer
 class terrainGenerator
 {
     size_t getPos(size_t x, size_t y) const;
@@ -107,11 +109,15 @@ class terrainGenerator
     unsigned Xside, Yside;
 
 public:
+    /*
+    *   @brief Constructor. Creates some terrain specified by the user
+    *   @param noise Noise generator
+    *   @param dimensionX Dimension of the X axis
+    *   @param dimensionY Dimension of the Y axis
+    */
     terrainGenerator(noiseSet &noise, unsigned dimensionX, unsigned dimensionY);
-    //terrainGenerator(const terrainGenerator& obj);                                      ///< Copy constructor
-    //bool operator== (terrainGenerator& obj);                                            ///< Operator != overloading
-    //friend std::ostream& operator << (std::ostream& os, const terrainGenerator& obj);   ///< Operator << overloading
-    ~terrainGenerator();
+
+    ~terrainGenerator();            ///< Destructor
 
     unsigned int totalVert;         ///< Amount of vertices passed to main (example: two triangles = 4)
     unsigned int totalVertUsed;     ///< Amount of vertices used for drawing (example: two triangles = 2*3)
@@ -119,21 +125,38 @@ public:
     float (*field)[11];             ///< VBO
     unsigned int (*indices)[3];     ///< EBO
 
-    void computeTerrain(noiseSet &noise, unsigned dimensionX, unsigned dimensionY);     ///< Compute VBO and EBO
+    /*
+    *   @brief Compute VBO and EBO
+    *   @param noise Noise generator
+    *   @param dimensionX Dimension of the X axis
+    *   @param dimensionY Dimension of the Y axis
+    */
+    void computeTerrain(noiseSet &noise, unsigned dimensionX, unsigned dimensionY);
 
     //float* getField() const;
     //unsigned* getIndices() const;
-    unsigned getXside() const;
-    unsigned getYside() const;
+    unsigned getXside() const;      ///< Get size of dimension X
+    unsigned getYside() const;      ///< Get size of dimension Y
 };
-
-//std::ostream& operator << (std::ostream& os, const terrainGenerator& obj);
 
 #endif
 
 // -----------------------------------------------------------------------------------
 
-/// Fills an array a coordinates axis (requires passing float array[12][3])
+/*
+*   @brief Makes a vertex buffer containing the vertex and colors for a 3D axis system in the origin
+*   @param array[12][3] Pointer to the array where data will be stored (float array[12][3])
+*   @param sizeOfAxis Desired length for each axis
+*/
 void fillAxis(float array[12][3], float sizeOfAxis);
 
-// -----------------------------------------------------------------------------------
+/*
+*   @brief Makes a vertex buffer containing the vertex and color for an horizontal sea surface
+*   @param array[12][3] Pointer to the array where data will be stored (float array[12][7])
+*   @param height Sea level
+*   @param x0 Origin X coordinate of the square surface
+*   @param y0 Origin Y coordinate of the square surface
+*   @param x1 Ending X coordinate of the square surface
+*   @param y1 Ending Y coordinate of the square surface
+*/
+void fillSea(float array[6][10], float height, float x0, float y0, float x1, float y1);

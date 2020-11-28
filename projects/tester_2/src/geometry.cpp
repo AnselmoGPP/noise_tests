@@ -7,84 +7,7 @@
 #include "glm/gtc/type_ptr.hpp"
 
 #include "geometry.hpp"
-/*
-// terrainData -----------------------------------------------------------------
 
-terrainData::terrainData()
-{
-    newConfig = true;
-
-    dimensions[0] = 128;
-    dimensions[1] = 128;
-
-    noiseType = FastNoiseLite::NoiseType_Perlin;
-    octaves = 6;
-    lacunarity = 1.5;
-    persistance = 0.5;
-    scale = 1.0f;
-    multiplier = 30;
-    seed = 0;
-    offset[0] = 0.0f;
-    offset[1] = 0.0f;
-}
-
-terrainData::terrainData(const terrainData& obj)
-{
-    newConfig = obj.newConfig;
-
-    dimensions[0] = obj.dimensions[0];
-    dimensions[1] = obj.dimensions[1];
-
-    noiseType = obj.noiseType;
-    octaves = obj.octaves;
-    lacunarity = obj.lacunarity;
-    persistance = obj.persistance;
-    scale = obj.scale;
-    multiplier = obj.multiplier;
-    seed = obj.seed;
-    offset[0] = obj.offset[0];
-    offset[1] = obj.offset[1];
-}
-
-bool terrainData::operator!= (terrainData& obj)
-{
-    if (
-        obj.dimensions[0] != dimensions[0] ||
-        obj.dimensions[1] != dimensions[1] ||
-
-        obj.noiseType != noiseType ||
-        obj.octaves != octaves ||
-        obj.lacunarity != lacunarity ||
-        obj.persistance != persistance ||
-        obj.scale != scale ||
-        obj.multiplier != multiplier ||
-        obj.seed != seed ||
-        obj.offset[0] != offset[0] ||
-        obj.offset[1] != offset[1]
-        )
-        return true;
-    else return false;
-}
-
-std::ostream& operator << (std::ostream& os, const terrainData& obj)
-{
-    const char* noiseTypeString[6] = { "OpenSimplex2", "OpenSimplex2S", "Cellular", "Perlin", "ValueCubic", "Value" };
-
-    os << "----------------------------" << std::endl;
-    os << "newConfig: " << obj.newConfig << std::endl;
-    os << "Dimensions (x,y): " << obj.dimensions[0] << ", " << obj.dimensions[1] << std::endl;
-    os << "Noise type: " << noiseTypeString[obj.noiseType] << std::endl;
-    os << "Octaves: " << obj.octaves << std::endl;
-    os << "Lacunarity: " << obj.lacunarity << "      Lacunarity ^ Octaves: " << std::pow(obj.lacunarity, (float)(obj.octaves - 1)) << std::endl;
-    os << "Persistance: " << obj.persistance << "      Persistance ^ Octaves: " << std::pow(obj.persistance, (float)(obj.octaves - 1)) << std::endl;
-    os << "Scale: " << obj.scale << std::endl;
-    os << "Multiplier: " << obj.multiplier << std::endl;
-    os << "Seed: " << obj.seed << std::endl;
-    os << "Offset (x, y): " << obj.offset[0] << ", " << obj.offset[1] << std::endl;
-
-    return os;
-}
-*/
 // noiseSet -----------------------------------------------------------------
 
 noiseSet::noiseSet(
@@ -93,6 +16,7 @@ noiseSet::noiseSet(
                     float Persistance,
                     float Scale,
                     float Multiplier,
+                    unsigned CurveDegree,
                     float OffsetX,
                     float OffsetY,
                     FastNoiseLite::NoiseType NoiseType,
@@ -106,6 +30,7 @@ noiseSet::noiseSet(
     persistance     = Persistance;
     scale           = Scale;
     multiplier      = Multiplier;
+    curveDegree     = CurveDegree;
     offsetX         = OffsetX;
     offsetY         = OffsetY;
     seed            = Seed;
@@ -144,29 +69,34 @@ noiseSet::noiseSet(
         }
     }
 
-    // get extreme value
-    extreme = 0;
-    float maxmin = std::sqrt((float)1/9);
+    // Get maximum noise
+    maxHeight = 0;
     float amplitude = 1;
 
     for(int i = 0; i < numOctaves; i++)
     {
-        extreme += maxmin * amplitude;
+        maxHeight += 1 * amplitude;
         amplitude *= persistance;
     }
 
-    extreme *= scale * multiplier;
+    maxHeight *= scale * multiplier;
 }
-/*
+
 noiseSet::noiseSet(const noiseSet& obj)
 {
-    noise = obj.noise;
-    noiseType = obj.noiseType;
-    numOctaves = obj.numOctaves;
-    lacunarity = obj.lacunarity;
+    noise       = obj.noise;
+    noiseType   = obj.noiseType;
+    numOctaves  = obj.numOctaves;
+    lacunarity  = obj.lacunarity;
     persistance = obj.persistance;
-    scale = obj.scale;
-    multiplier = obj.multiplier;
+    scale       = obj.scale;
+    multiplier  = obj.multiplier;
+    curveDegree = obj.curveDegree;
+    offsetX     = obj.offsetX;
+    offsetY     = obj.offsetY;
+    seed        = obj.seed;
+    
+    maxHeight     = obj.maxHeight;
 
     for(size_t i = 0; i < numOctaves; i++)
     {
@@ -175,24 +105,28 @@ noiseSet::noiseSet(const noiseSet& obj)
     }
 }
 
-bool noiseSet::operator== (noiseSet& obj)
+bool noiseSet::operator != (noiseSet& obj)
 {
-    if( noiseType != obj.noiseType ||
-        numOctaves != obj.numOctaves ||
-        lacunarity != obj.lacunarity ||
+    if( noiseType   != obj.noiseType ||
+        numOctaves  != obj.numOctaves ||
+        lacunarity  != obj.lacunarity ||
         persistance != obj.persistance ||
-        scale != obj.scale ||
-        multiplier != obj.multiplier)
-        return false;
+        scale       != obj.scale ||
+        multiplier  != obj.multiplier ||
+        curveDegree != obj.curveDegree ||
+        offsetX     != obj.offsetX ||
+        offsetY     != obj.offsetY ||
+        seed        != obj.seed )
+        return true;
 
     for(size_t i = 0; i < numOctaves; i++)
     {
         if( octaveOffsets[i][0] != obj.octaveOffsets[i][0] ||
             octaveOffsets[i][1] != obj.octaveOffsets[i][1])
-            return false;
+            return true;
     }
 
-    return true;
+    return false;
 }
 
 std::ostream& operator << (std::ostream& os, const noiseSet& obj)
@@ -204,48 +138,69 @@ std::ostream& operator << (std::ostream& os, const noiseSet& obj)
        << "\nPersistance: "  << obj.persistance
        << "\nScale: "        << obj.scale
        << "\nMultiplier: "   << obj.multiplier
+       << "\nCurve degree: " << obj.curveDegree
+       << "\nOffset X: "     << obj.offsetX
+       << "\nOffset Y: "     << obj.offsetY
+       << "\nSeed: "         << obj.seed
+       << "\nMax. height: "  << obj.maxHeight
        << std::endl;
+
+    return os;
 }
-*/
-float                 noiseSet::GetNoise(float X, float Y, bool includeOffset)
+
+float noiseSet::GetNoise(float X, float Y)
 {
     float result = 0;
     float frequency = 1, amplitude = 1;
 
     for(int i = 0; i < numOctaves; i++)
     {
-        if (includeOffset)
-        {
-            X = X / scale * frequency + octaveOffsets[i][0];
-            Y = Y / scale * frequency + octaveOffsets[i][1];
-        }
-        else
-        {
-            X = X / scale * frequency;
-            Y = Y / scale * frequency;
-        }
+        X = (X / scale) * frequency + octaveOffsets[i][0];
+        Y = (Y / scale) * frequency + octaveOffsets[i][1];
 
-        result += noise.GetNoise(X, Y) * amplitude;
+        result += ((1 + noise.GetNoise(X, Y)) / 2) * amplitude;   // noise.GetNoise() returns in range [-1, 1]. We convert it to [0, 1]
 
         frequency *= lacunarity;
         amplitude *= persistance;
     }
 
-    return result * scale * multiplier;
+    float curveFactor = std::pow(result, curveDegree);
+
+    return result * curveFactor * scale * multiplier;
 }
 
-float                 noiseSet::getExtreme() const { return extreme; };
+float                 noiseSet::getMaxHeight() const { return maxHeight; };
 
-unsigned              noiseSet::getNoiseType()      const { return noiseType; };
-unsigned              noiseSet::getNumOctaves()     const { return numOctaves; };
-float                 noiseSet::getLacunarity()     const { return lacunarity; };
-float                 noiseSet::getPersistance()    const { return persistance; };
-float                 noiseSet::getScale()          const { return scale; };
-float                 noiseSet::getMultiplier()     const { return multiplier; };
+unsigned              noiseSet::getNoiseType()      const { return noiseType; }
+unsigned              noiseSet::getNumOctaves()     const { return numOctaves; }
+float                 noiseSet::getLacunarity()     const { return lacunarity; }
+float                 noiseSet::getPersistance()    const { return persistance; }
+float                 noiseSet::getScale()          const { return scale; }
+float                 noiseSet::getMultiplier()     const { return multiplier; }
+float                 noiseSet::getCurveDegree()    const { return curveDegree; }
 float                 noiseSet::getOffsetX()        const { return offsetX; }
 float                 noiseSet::getOffsetY()        const { return offsetY; }
 unsigned int          noiseSet::getSeed()           const { return seed; }
-float*                noiseSet::getOffsets()        const { return &octaveOffsets[0][0]; };
+float*                noiseSet::getOffsets()        const { return &octaveOffsets[0][0]; }
+
+void noiseSet::noiseTester(size_t size)
+{
+    float max = 0, min = 0;
+    float noise;
+
+    std::cout << "Size: " << size << std::endl;
+
+    for(size_t i = 1; i != size; i++)
+    {
+        std::cout << "%: " << 100 * (float)i/size << "     \r";
+        for(size_t j = 1; j != size; j++)
+        {
+            noise = GetNoise(i, j);
+            if      (noise > max) max = noise;
+            else if (noise < min) min = noise;
+        }
+    }
+}
 
 // terrainGenerator -----------------------------------------------------------------
 
@@ -256,65 +211,7 @@ terrainGenerator::terrainGenerator(noiseSet &noise, unsigned dimensionX, unsigne
 
     computeTerrain(noise, dimensionX, dimensionY);
 }
-/*
-terrainGenerator::terrainGenerator(const terrainGenerator& obj)
-{
-    Xside = obj.Xside;
-    Yside = obj.Yside;
 
-    totalVert = obj.totalVert;
-    totalVertUsed = obj.totalVertUsed;
-
-    delete[] field;
-    field = new float[totalVert][11];
-    for(size_t i = 0; i < totalVert; i++)
-    {
-        for(int j = 0; j < 11; j++)
-            field[i][j] = obj.field[i][j];
-    }
-
-    delete[] indices;
-    indices = new unsigned int[totalVertUsed/3][3];
-    for(size_t i = 0; i < totalVertUsed; i++)
-    {
-        indices[i][0] = obj.indices[i][0];
-        indices[i][1] = obj.indices[i][1];
-        indices[i][2] = obj.indices[i][2];
-    }
-}
-
-bool terrainGenerator::operator== (terrainGenerator& obj)
-{
-    if( Xside == obj.Xside &&
-        Yside == obj.Yside &&
-        totalVert == obj.totalVert &&
-        totalVertUsed == obj.totalVertUsed)
-        return true;
-    else
-        return false;
-}
-
-std::ostream& operator << (std::ostream& os, const terrainGenerator& obj)
-{
-    unsigned Xside = obj.Xside;
-    unsigned Yside = obj.Yside;
-
-    os << "Side: " << Xside << " x " << Yside << std::endl;
-    os << "Drawn vertices: " << obj.totalVertUsed << std::endl;
-
-    os << "Vertices: " << std::endl;
-    for(size_t y = Yside-1; y < Yside; y--)
-    {
-        for(size_t x = 0; x < Xside; x++)
-            os << "(" << obj.field[obj.getPos(x, y)][0] << ", " << obj.field[obj.getPos(x, y)][1] << ") ";
-        os << std::endl;
-    }
-
-    os << "Indices: " << std::endl;
-    for(size_t i = 0; i < obj.totalVertUsed/3; i++)
-        os << obj.indices[i][0] << ", " << obj.indices[i][1] << ", " << obj.indices[i][2] << std::endl;
-}
-*/
 terrainGenerator::~terrainGenerator()
 {
     delete[] field;
@@ -347,7 +244,7 @@ void terrainGenerator::computeTerrain(noiseSet &noise, unsigned dimensionX, unsi
             // positions
             field[pos][0] = x;
             field[pos][1] = y;
-            field[pos][2] = noise.GetNoise((float)x, (float)y, true);
+            field[pos][2] = noise.GetNoise((float)x, (float)y);
 
             // colors
             field[pos][3] = 0.5f;
@@ -481,4 +378,75 @@ void fillAxis(float array[12][3], float sizeOfAxis)
     array[11][0] = 0.f;
     array[11][1] = 0.f;
     array[11][2] = 1.f;
+}
+
+void fillSea(float array[6][10], float height, float x0, float y0, float x1, float y1)
+{
+    float color[4] = { 0.1f, 0.1f, 0.8f, 0.9 };
+
+    array[0][0] = x0;
+    array[0][1] = y0;
+    array[0][2] = height;
+    array[0][3] = color[0];
+    array[0][4] = color[1];
+    array[0][5] = color[2];
+    array[0][6] = color[3];
+    array[0][7] = 0;
+    array[0][8] = 0;
+    array[0][9] = 1;
+
+    array[1][0] = x1;
+    array[1][1] = y0;
+    array[1][2] = height;
+    array[1][3] = color[0];
+    array[1][4] = color[1];
+    array[1][5] = color[2];
+    array[1][6] = color[3];
+    array[1][7] = 0;
+    array[1][8] = 0;
+    array[1][9] = 1;
+
+    array[2][0] = x0;
+    array[2][1] = y1;
+    array[2][2] = height;
+    array[2][3] = color[0];
+    array[2][4] = color[1];
+    array[2][5] = color[2];
+    array[2][6] = color[3];
+    array[2][7] = 0;
+    array[2][8] = 0;
+    array[2][9] = 1;
+
+    array[3][0] = x1;
+    array[3][1] = y0;
+    array[3][2] = height;
+    array[3][3] = color[0];
+    array[3][4] = color[1];
+    array[3][5] = color[2];
+    array[3][6] = color[3];
+    array[3][7] = 0;
+    array[3][8] = 0;
+    array[3][9] = 1;
+
+    array[4][0] = x1;
+    array[4][1] = y1;
+    array[4][2] = height;
+    array[4][3] = color[0];
+    array[4][4] = color[1];
+    array[4][5] = color[2];
+    array[4][6] = color[3];
+    array[4][7] = 0;
+    array[4][8] = 0;
+    array[4][9] = 1;
+
+    array[5][0] = x0;
+    array[5][1] = y1;
+    array[5][2] = height;
+    array[5][3] = color[0];
+    array[5][4] = color[1];
+    array[5][5] = color[2];
+    array[5][6] = color[3];
+    array[5][7] = 0;
+    array[5][8] = 0;
+    array[5][9] = 1;
 }
