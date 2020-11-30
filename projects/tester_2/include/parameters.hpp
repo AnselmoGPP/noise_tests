@@ -33,7 +33,7 @@ enum VBO { terr, axis };
 
 // Terrain data (for GUI)
 noiseSet noise;
-terrainGenerator terrain(noise, 128, 128);
+terrainGenerator terrain(noise, 0, 0, 1, 128, 128);
 bool newTerrain = true;
 float seaLevel = 0;
 

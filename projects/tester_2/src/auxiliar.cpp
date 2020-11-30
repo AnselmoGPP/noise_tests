@@ -55,7 +55,7 @@ void timerSet::computeDeltaTime()
 
 void timerSet::printTimeData()
 {
-    std::cout << frameCounter << " | fps: " << FPS << " | " << lastTimeSeconds << "\r";
+    //std::cout << frameCounter << " | fps: " << FPS << " | " << "seconds/frame: " << lastTimeSeconds << "     \r";
     //std::cout << frameCounter << " | fps: " << FPS << " | " << lastTimeSeconds << std::endl;
 }
 

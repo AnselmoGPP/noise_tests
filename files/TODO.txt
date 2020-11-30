@@ -1,6 +1,6 @@
 Class for mesh data (axis, sun, sea)
 terrain extender beyond limits
-
+change projection when resizing window
 gui bar for shininess & specularStrength
 
 ----------------------------------

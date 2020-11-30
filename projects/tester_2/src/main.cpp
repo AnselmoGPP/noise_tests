@@ -98,27 +98,43 @@ int main()
     // ----- OGL general options
     printOGLdata();
 
-    glEnable(GL_DEPTH_TEST);                            // Depth test (draw what is the front)
+    glEnable(GL_DEPTH_TEST);                            // Depth test (draw what is the front)    Another option: glDepthFunc(GL_LESS);  // Accept fragment if it's closer to the camera than the former one
+
     glFrontFace(GL_CCW);                                // Front face is drawn counterclock wise
+
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Wireframe mode
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);        // Back to default
 
     glEnable(GL_BLEND);                                 // Enable transparency
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // Enable transparency
 
+    glEnable(GL_CULL_FACE);
+
+    /*
+    // Point parameters
+    glEnable(GL_PROGRAM_POINT_SIZE);			// Enable GL_POINTS
+    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);		// Enable gl_PointSize in the vertex shader
+    glEnable(GL_POINT_SMOOTH);					// For circular points (GPU implementation dependent)
+    glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);	// For circular points (GPU implementation dependent)
+    glPointSize(5.0);							// GL_POINT_SIZE_MAX is GPU implementation dependent
+
+    // Lines parameters
+    glLineWidth(2.0);
+    GLfloat lineWidthRange[2];                  // GPU implementation dependent
+    glGetFloatv(GL_ALIASED_LINE_WIDTH_RANGE, lineWidthRange);
+    */
+
     // ----- Set up vertex data, buffers, and configure vertex attributes
 
     // >>> Terrain
-
-    terrain.computeTerrain(noise, 128, 128);
 
     Shader terrProgram(
         "../../../projects/tester_2/shaders/vertexShader.vs",
         "../../../projects/tester_2/shaders/fragmentShader.fs");
 
     unsigned int VAO = createVAO();
-    unsigned int VBO = createVBO(sizeof(float)*terrain.totalVert*11, terrain.field, GL_STATIC_DRAW);
-    unsigned int EBO = createEBO(sizeof(unsigned int)*terrain.totalVertUsed, terrain.indices, GL_STATIC_DRAW);
+    unsigned int VBO = createVBO(sizeof(float)*terrain.getNumVertex()*11, terrain.vertex, GL_STATIC_DRAW);
+    unsigned int EBO = createEBO(sizeof(unsigned int)*terrain.getNumIndices(), terrain.indices, GL_STATIC_DRAW);
 
     int sizesAtribsTerrain[4] = { 3, 3, 2, 3 };
     configVAO(VAO, VBO, EBO, sizesAtribsTerrain, 4);
@@ -212,16 +228,16 @@ int main()
         {
             glBindVertexArray(VAO);
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(float)*terrain.totalVert*11, terrain.field, GL_STATIC_DRAW);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(float)*terrain.getNumVertex()*11, terrain.vertex, GL_STATIC_DRAW);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * terrain.totalVertUsed, terrain.indices, GL_STATIC_DRAW);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * terrain.getNumIndices(), terrain.indices, GL_STATIC_DRAW);
 
             newTerrain = false;
         }
 
         setUniforms(terrProgram, texture1);
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, terrain.totalVertUsed, GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDrawElements(GL_TRIANGLES, terrain.getNumIndices(), GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // >>> Water
         if(water[4][0] != terrain.getXside() || water[4][1] != terrain.getYside() || water[0][2] != seaLevel)
@@ -280,7 +296,7 @@ int main()
         // ----------------------------------
         // ----------------------------------
 
-        //timer.printTimeData();
+        timer.printTimeData();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -457,7 +473,7 @@ void GUI_terrainConfig()
     if( noise != newNoise || dimensionX != terrain.getXside() ||  dimensionY != terrain.getYside() )
     {
         noise = newNoise;
-        terrain.computeTerrain(noise, dimensionX, dimensionY);
+        terrain.computeTerrain(noise, 0, 0, 1, dimensionX, dimensionY);
         newTerrain = true;
     }
 }

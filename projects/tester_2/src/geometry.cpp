@@ -82,6 +82,11 @@ noiseSet::noiseSet(
     maxHeight *= scale * multiplier;
 }
 
+noiseSet::~noiseSet()
+{
+    delete[] octaveOffsets;
+}
+
 noiseSet::noiseSet(const noiseSet& obj)
 {
     noise       = obj.noise;
@@ -98,6 +103,7 @@ noiseSet::noiseSet(const noiseSet& obj)
     
     maxHeight     = obj.maxHeight;
 
+    delete[] octaveOffsets;
     for(size_t i = 0; i < numOctaves; i++)
     {
         octaveOffsets[i][0] = obj.octaveOffsets[i][0];
@@ -118,13 +124,6 @@ bool noiseSet::operator != (noiseSet& obj)
         offsetY     != obj.offsetY ||
         seed        != obj.seed )
         return true;
-
-    for(size_t i = 0; i < numOctaves; i++)
-    {
-        if( octaveOffsets[i][0] != obj.octaveOffsets[i][0] ||
-            octaveOffsets[i][1] != obj.octaveOffsets[i][1])
-            return true;
-    }
 
     return false;
 }
@@ -204,56 +203,51 @@ void noiseSet::noiseTester(size_t size)
 
 // terrainGenerator -----------------------------------------------------------------
 
-terrainGenerator::terrainGenerator(noiseSet &noise, unsigned dimensionX, unsigned dimensionY)
+terrainGenerator::terrainGenerator(noiseSet &noise, float x0, float y0, float stride, unsigned numVertex_X, unsigned numVertex_Y)
 {
-    Xside = 0;
-    Yside = 0;
-
-    computeTerrain(noise, dimensionX, dimensionY);
+    computeTerrain(noise, x0, y0, stride, numVertex_X, numVertex_Y);
 }
 
 terrainGenerator::~terrainGenerator()
 {
-    delete[] field;
+    delete[] vertex;
     delete[] indices;
 }
 
-void terrainGenerator::computeTerrain(noiseSet &noise, unsigned dimensionX, unsigned dimensionY)
+void terrainGenerator::computeTerrain(noiseSet &noise, float x0, float y0, float stride, unsigned numVertex_X, unsigned numVertex_Y, float textureFactor)
 {
-    if (dimensionX != Xside || dimensionY != Yside)
+    if (numVertexX != numVertex_X || numVertexY != numVertex_Y)
     {
-        Xside = dimensionX;
-        Yside = dimensionY;
-        totalVert = Xside * Yside;
-        totalVertUsed = (Xside - 1) * (Yside - 1) * 2 * 3;
+        numVertexX = numVertex_X;
+        numVertexY = numVertex_Y;
+        numVertex  = numVertexX * numVertexY;
+        numIndices = (numVertexX - 1) * (numVertexY - 1) * 2 * 3;
 
-        delete[] field;
-        field = new float[totalVert][11];
+        delete[] vertex;
+        vertex = new float[numVertex][11];
         delete[] indices;
-        indices = new unsigned int[totalVertUsed/3][3];
+        indices = new unsigned int[numIndices/3][3];
     }
 
-    float textureFactor = 0.1;
-
     // Vertex data
-    for (size_t y = 0; y < Yside; y++)
-        for (size_t x = 0; x < Xside; x++)
+    for (size_t y = 0; y < numVertexY; y++)
+        for (size_t x = 0; x < numVertexX; x++)
         {
             size_t pos = getPos(x, y);
 
             // positions
-            field[pos][0] = x;
-            field[pos][1] = y;
-            field[pos][2] = noise.GetNoise((float)x, (float)y);
+            vertex[pos][0] = x0 + x * stride;
+            vertex[pos][1] = y0 + y * stride;
+            vertex[pos][2] = noise.GetNoise((float)vertex[pos][0], (float)vertex[pos][1]);
 
             // colors
-            field[pos][3] = 0.5f;
-            field[pos][4] = 0.1f;
-            field[pos][5] = 0.2f;
+            vertex[pos][3] = 0.5f;
+            vertex[pos][4] = 0.1f;
+            vertex[pos][5] = 0.2f;
 
             // textures
-            field[pos][6] = x * textureFactor;
-            field[pos][7] = y * textureFactor;
+            vertex[pos][6] = x * textureFactor;
+            vertex[pos][7] = y * textureFactor;
 
             // normals
             //field[pos][8] = 0.0f;
@@ -262,12 +256,12 @@ void terrainGenerator::computeTerrain(noiseSet &noise, unsigned dimensionX, unsi
         }
 
     // Normals
-    glm::vec3* tempNormals = new glm::vec3[totalVert];  // Initialize normals to 0
-    for (size_t i = 0; i < totalVert; i++)
+    glm::vec3* tempNormals = new glm::vec3[numVertex];      // Initialize normals to 0
+    for (size_t i = 0; i < numVertex; i++)
         tempNormals[i] = glm::vec3(0.f, 0.f, 0.f);
 
-    for (size_t y = 0; y < Yside - 1; y++)            // Compute normals
-        for (size_t x = 0; x < Xside - 1; x++)
+    for (size_t y = 0; y < numVertexY - 1; y++)            // Compute normals
+        for (size_t x = 0; x < numVertexX - 1; x++)
         {
             /*
                            Cside
@@ -284,10 +278,10 @@ void terrainGenerator::computeTerrain(noiseSet &noise, unsigned dimensionX, unsi
             size_t C = getPos(x + 1, y + 1);
             size_t D = getPos(x, y + 1);
 
-            glm::vec3 Aside = glm::vec3(field[B][0], field[B][1], field[B][2]) - glm::vec3(field[A][0], field[A][1], field[A][2]);
-            glm::vec3 Bside = glm::vec3(field[C][0], field[C][1], field[C][2]) - glm::vec3(field[B][0], field[B][1], field[B][2]);
-            glm::vec3 Cside = glm::vec3(field[C][0], field[C][1], field[C][2]) - glm::vec3(field[D][0], field[D][1], field[D][2]);
-            glm::vec3 Dside = glm::vec3(field[D][0], field[D][1], field[D][2]) - glm::vec3(field[A][0], field[A][1], field[A][2]);
+            glm::vec3 Aside = glm::vec3(vertex[B][0], vertex[B][1], vertex[B][2]) - glm::vec3(vertex[A][0], vertex[A][1], vertex[A][2]);
+            glm::vec3 Bside = glm::vec3(vertex[C][0], vertex[C][1], vertex[C][2]) - glm::vec3(vertex[B][0], vertex[B][1], vertex[B][2]);
+            glm::vec3 Cside = glm::vec3(vertex[C][0], vertex[C][1], vertex[C][2]) - glm::vec3(vertex[D][0], vertex[D][1], vertex[D][2]);
+            glm::vec3 Dside = glm::vec3(vertex[D][0], vertex[D][1], vertex[D][2]) - glm::vec3(vertex[A][0], vertex[A][1], vertex[A][2]);
 
             glm::vec3 Anormal = glm::cross(Aside, Dside);
             glm::vec3 Bnormal = glm::cross(Bside, -Aside);
@@ -300,38 +294,40 @@ void terrainGenerator::computeTerrain(noiseSet &noise, unsigned dimensionX, unsi
             tempNormals[D] += Dnormal;
         }
 
-    for (int i = 0; i < totalVert; i++)                 // Normalize the normals
+    for (int i = 0; i < numVertex; i++)                 // Normalize the normals
     {
         tempNormals[i] = glm::normalize(tempNormals[i]);
 
-        field[i][8] = tempNormals[i].x;
-        field[i][9] = tempNormals[i].y;
-        field[i][10] = tempNormals[i].z;
+        vertex[i][8] = tempNormals[i].x;
+        vertex[i][9] = tempNormals[i].y;
+        vertex[i][10] = tempNormals[i].z;
     }
+
     delete[] tempNormals;
 
     // Indices
     size_t index = 0;
 
-    for (size_t y = 0; y < Yside - 1; y++)
-        for (size_t x = 0; x < Xside - 1; x++)
+    for (size_t y = 0; y < numVertexY - 1; y++)
+        for (size_t x = 0; x < numVertexX - 1; x++)
         {
             unsigned int pos = getPos(x, y);
 
             indices[index][0] = pos;
-            indices[index][1] = pos + Xside + 1;
-            indices[index++][2] = pos + Xside;
+            indices[index][1] = pos + numVertexX + 1;
+            indices[index++][2] = pos + numVertexX;
             indices[index][0] = pos;
             indices[index][1] = pos + 1;
-            indices[index++][2] = pos + Xside + 1;
+            indices[index++][2] = pos + numVertexX + 1;
         }
 }
 
-size_t terrainGenerator::getPos(size_t x, size_t y) const { return y * Xside + x; }
+unsigned terrainGenerator::getXside() const { return numVertexX; }
+unsigned terrainGenerator::getYside() const { return numVertexY; }
+unsigned terrainGenerator::getNumVertex() const { return numVertex; }
+unsigned terrainGenerator::getNumIndices() const { return numIndices; }
 
-unsigned terrainGenerator::getXside() const { return Xside; }
-
-unsigned terrainGenerator::getYside() const { return Yside; }
+size_t terrainGenerator::getPos(size_t x, size_t y) const { return y * numVertexX + x; }
 
 // ----------------------------------------------------------------------------------
 

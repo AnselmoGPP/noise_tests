@@ -63,7 +63,7 @@ public:
              FastNoiseLite::NoiseType NoiseType = FastNoiseLite::NoiseType_Perlin,
              bool addRandomOffset               = false,
              unsigned int Seed                  = 0);
-    ~noiseSet() = default;                                                      ///< Destructor
+    ~noiseSet();                                                                ///< Destructor
     noiseSet(const noiseSet& obj);                                              ///< Copy constructor
     bool operator != (noiseSet& obj);                                           ///< Operator != overloading
     friend std::ostream& operator << (std::ostream& os, const noiseSet& obj);   ///< Operator << overloading
@@ -106,37 +106,45 @@ class terrainGenerator
 {
     size_t getPos(size_t x, size_t y) const;
 
-    unsigned Xside, Yside;
+    unsigned numVertexX;
+    unsigned numVertexY;
+    unsigned numVertex;
+    unsigned numIndices;
 
 public:
     /*
-    *   @brief Constructor. Creates some terrain specified by the user
+    *   @brief Constructor. Compute VBO and EBO (creates some terrain specified by the user)
     *   @param noise Noise generator
-    *   @param dimensionX Dimension of the X axis
-    *   @param dimensionY Dimension of the Y axis
+    *   @param x0 Coordinate X of the first square's corner
+    *   @param y0 Coordinate Y of the first square's corner
+    *   @param stride Separation between vertex
+    *   @param numVertex_X Number of vertex along the X axis
+    *   @param numVertex_Y Number of vertex along the Y axis
+    *   @param textureFactor How much of the texture surface will fit in a square of 4 contiguous vertex
     */
-    terrainGenerator(noiseSet &noise, unsigned dimensionX, unsigned dimensionY);
+    terrainGenerator(noiseSet &noise, float x0, float y0, float stride, unsigned numVertexX, unsigned numVertexY);
 
     ~terrainGenerator();            ///< Destructor
 
-    unsigned int totalVert;         ///< Amount of vertices passed to main (example: two triangles = 4)
-    unsigned int totalVertUsed;     ///< Amount of vertices used for drawing (example: two triangles = 2*3)
-
-    float (*field)[11];             ///< VBO
+    float (*vertex)[11];            ///< VBO
     unsigned int (*indices)[3];     ///< EBO
 
     /*
     *   @brief Compute VBO and EBO
     *   @param noise Noise generator
-    *   @param dimensionX Dimension of the X axis
-    *   @param dimensionY Dimension of the Y axis
+    *   @param x0 Coordinate X of the first square's corner
+    *   @param y0 Coordinate Y of the first square's corner
+    *   @param stride Separation between vertex
+    *   @param numVertex_X Number of vertex along the X axis
+    *   @param numVertex_Y Number of vertex along the Y axis
+    *   @param textureFactor How much of the texture surface will fit in a square of 4 contiguous vertex
     */
-    void computeTerrain(noiseSet &noise, unsigned dimensionX, unsigned dimensionY);
+    void computeTerrain(noiseSet &noise, float x0, float y0, float stride, unsigned numVertex_X, unsigned numVertex_Y, float textureFactor = 0.1f);
 
-    //float* getField() const;
-    //unsigned* getIndices() const;
-    unsigned getXside() const;      ///< Get size of dimension X
-    unsigned getYside() const;      ///< Get size of dimension Y
+    unsigned getXside() const;      ///< Get number of vertex along X axis
+    unsigned getYside() const;      ///< Get number of vertex along Y axis
+    unsigned getNumVertex() const;  ///< Amount of vertex in VBO (example: two triangles = 4)
+    unsigned getNumIndices() const; ///< Amount of indices in the EBO (example: two triangles = 2*3)
 };
 
 #endif
