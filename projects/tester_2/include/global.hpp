@@ -1,18 +1,14 @@
-#ifndef PARAMETERS_HPP
-#define PARAMETERS_HPP
+#ifndef GLOBAL_DATA_HPP
+#define GLOBAL_DATA_HPP
 
 #include "camera.hpp"
 #include "auxiliar.hpp"
 #include "geometry.hpp"
 
-// Settings (typedef and global data section) --------------------
-
-// window size
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+// Settings (typedef and global data section)
 
 // camera
-Camera cam(glm::vec3(64.0f, -30.0f, 90.0f));
+Camera cam(glm::vec3(128.0f, -30.0f, 150.0f));
 float lastX =  SCR_WIDTH  / 2.0;
 float lastY =  SCR_HEIGHT / 2.0;
 bool firstMouse = true;
@@ -27,13 +23,9 @@ glm::vec3 lightCol(1.f, 1.f, 1.f);
 glm::vec3 lightPos(-557.f, 577.f, 577.f);
 glm::vec3 lightDir(-0.57735f, 0.57735f, 0.57735f);
 
-// buffers
-const size_t numBuffers = 2;
-enum VBO { terr, axis };
-
 // Terrain data (for GUI)
 noiseSet noise;
-terrainGenerator terrain(noise, 0, 0, 1, 128, 128);
+terrainGenerator terrain(noise, 0, 0, 1, 256, 256);
 bool newTerrain = true;
 float seaLevel = 0;
 

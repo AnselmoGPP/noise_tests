@@ -24,7 +24,7 @@ ADD_EXECUTABLE(${PROJECT_NAME}
 	src/myGUI.cpp
 	src/canvas.cpp
 
-	include/parameters.hpp
+	include/global.hpp
 	include/auxiliar.hpp
 	include/shader.hpp
 	include/camera.hpp
@@ -34,10 +34,12 @@ ADD_EXECUTABLE(${PROJECT_NAME}
 
 	shaders/vertexShader.vs
 	shaders/fragmentShader.fs
-	shaders/axis.vs
-	shaders/axis.fs
-	shaders/water.vs
-	shaders/water.fs
+	shaders/vertexVec3_colorVec3.vs
+	shaders/vertexVec3_colorVec3.fs
+	shaders/vertexVec3_colorVec4_normalVec3.vs
+	shaders/vertexVec3_colorVec4_normalVec3.fs
+	shaders/vertexVec3_colorUnifVec4.vs
+	shaders/vertexVec3_colorUnifVec4.fs
 
 	../../files/TODO.txt
 	CMakeLists.txt

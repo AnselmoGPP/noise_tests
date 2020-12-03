@@ -76,7 +76,10 @@ int timerSet::getFPS() { return FPS; }
 
 void timerSet::setMaxFPS(int newFPS) { maxFPS = newFPS; }
 
-size_t timerSet::getFrameCounter() { return frameCounter; };
+size_t timerSet::getFrameCounter() { return frameCounter; }
+
+
+void p(std::string str) { std::cout << str << std::endl; }
 
 
 // ----- EigenCG ---------------

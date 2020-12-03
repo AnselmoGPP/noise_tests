@@ -1,7 +1,6 @@
 #ifndef GEOMETRY_HPP
 #define GEOMETRY_HPP
 
-#include <iostream>
 #include <random>
 
 #include "FastNoiseLite.h"
@@ -147,8 +146,6 @@ public:
     unsigned getNumIndices() const; ///< Amount of indices in the EBO (example: two triangles = 2*3)
 };
 
-#endif
-
 // -----------------------------------------------------------------------------------
 
 /*
@@ -162,9 +159,104 @@ void fillAxis(float array[12][3], float sizeOfAxis);
 *   @brief Makes a vertex buffer containing the vertex and color for an horizontal sea surface
 *   @param array[12][3] Pointer to the array where data will be stored (float array[12][7])
 *   @param height Sea level
+*   @param transparency Alpha channel (range: [0, 1])
 *   @param x0 Origin X coordinate of the square surface
 *   @param y0 Origin Y coordinate of the square surface
 *   @param x1 Ending X coordinate of the square surface
 *   @param y1 Ending Y coordinate of the square surface
 */
-void fillSea(float array[6][10], float height, float x0, float y0, float x1, float y1);
+void fillSea(float array[6][10], float height, float transparency, float x0, float y0, float x1, float y1);
+
+/*
+*   @brief Makes a vertex buffer containing a sphere generated out of a cube, with a specified color
+*   @param array Pointer to the array where data will be stored ( float array[6][numVertexPerSide * numVertexPerSide][6] )
+*   @param indices Pointer to the array where indices will be stored ( unsigned indices[6][(numVertexPerSide-1)*(numVertexPerSide-1)*2][3] )
+*   @param radius Sphere's radius
+*   @param numVertexPerSide Number of vertex per side in each square side of the cube
+*   @param R Red value
+*   @param G Green value
+*   @param B Blue value
+*/
+void fillCubicSphere(float*** array, unsigned*** indices, float radius, unsigned numVertexPerSide, float R, float G, float B);
+
+/// Icosahedron data
+struct Icosahedron
+{
+    const int numIndices  = 20*3;
+    const int numVertices = 12*3;
+    const int numColors   = 12*4;
+
+    float vertices[12*3] =
+    {
+         0.f,       -0.525731f,  0.850651f,     // vertices[0]
+         0.850651f,  0.f,        0.525731f,     // vertices[1]
+         0.850651f,  0.f,       -0.525731f,     // vertices[2]
+        -0.850651f,  0.f,       -0.525731f,     // vertices[3]
+        -0.850651f,  0.f,        0.525731f,     // vertices[4]
+        -0.525731f,  0.850651f,  0.f,           // vertices[5]
+         0.525731f,  0.850651f,  0.f,           // vertices[6]
+         0.525731f, -0.850651f,  0.f,           // vertices[7]
+        -0.525731f, -0.850651f,  0.f,           // vertices[8]
+         0.f,       -0.525731f, -0.850651f,     // vertices[9]
+         0.f,        0.525731f, -0.850651f,     // vertices[10]
+         0.f,        0.525731f,  0.850651f      // vertices[11]
+    };
+
+    float colors[12*4] =
+    {
+        1.0, 0.0, 0.0, 1.0,
+        1.0, 0.5, 0.0, 1.0,
+        1.0, 1.0, 0.0, 1.0,
+        0.5, 1.0, 0.0, 1.0,
+        0.0, 1.0, 0.0, 1.0,
+        0.0, 1.0, 0.5, 1.0,
+        0.0, 1.0, 1.0, 1.0,
+        0.0, 0.5, 1.0, 1.0,
+        0.0, 0.0, 1.0, 1.0,
+        0.5, 0.0, 1.0, 1.0,
+        1.0, 0.0, 1.0, 1.0,
+        1.0, 0.0, 0.5, 1.0
+    };
+
+    unsigned indices[20*3] =
+    {
+        1,  2,  6,
+        1,  7,  2,
+        3,  4,  5,
+        4,  3,  8,
+        6,  5,  11,
+        5,  6,  10,
+        9,  10, 2,
+        10, 9,  3,
+        7,  8,  9,
+        8,  7,  0,
+        11, 0,  1,
+        0,  11, 4,
+        6,  2,  10,
+        1,  6,  11,
+        3,  5,  10,
+        5,  4,  11,
+        2,  7,  9,
+        7,  1,  0,
+        3,  9,  8,
+        4,  8,  0,
+    };
+
+    float normals[12*3] =
+    {
+         0.000000f, -0.417775f,  0.675974f,
+         0.675973f,  0.000000f,  0.417775f,
+         0.675973f, -0.000000f, -0.417775f,
+        -0.675973f,  0.000000f, -0.417775f,
+        -0.675973f, -0.000000f,  0.417775f,
+        -0.417775f,  0.675974f,  0.000000f,
+         0.417775f,  0.675973f, -0.000000f,
+         0.417775f, -0.675974f,  0.000000f,
+        -0.417775f, -0.675974f,  0.000000f,
+         0.000000f, -0.417775f, -0.675973f,
+         0.000000f,  0.417775f, -0.675974f,
+         0.000000f,  0.417775f,  0.675973f,
+    };
+};
+
+#endif

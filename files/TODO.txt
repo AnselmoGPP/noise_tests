@@ -1,8 +1,12 @@
-Class for mesh data (axis, sun, sea)
-terrain extender beyond limits
-change projection when resizing window
+terrain extender beyond limits (big numbers)
 gui bar for shininess & specularStrength
+Function for normals generation (and more encapsulations?)
 
+LOD > Endless terrain (pixel circle) > Threading > Change resolution depending on distance from the viewer >
+> not updating chunks in every frame (make the viewer move some distance before doing it (viewerMoveThresholdForChunckUpdate)) (remember that getting the square distance is faster than actual distance)
+
+learnopengl
+fog
 ----------------------------------
 
 Doxygen comments (including documenting files)

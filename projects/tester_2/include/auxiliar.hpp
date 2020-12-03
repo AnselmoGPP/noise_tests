@@ -50,6 +50,9 @@ public:
 };
 
 
+/// Print a simple string X in the following way: std::cout << X << std::endl;
+void p(std::string str);
+
 /*
   // Eigen algebra library in progress...
 

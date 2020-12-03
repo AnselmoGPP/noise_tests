@@ -10,7 +10,7 @@ in vec3 FragPos;
 uniform vec3 objectColor;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
-uniform vec3 lightDir;
+uniform vec3 lightDir;  // not used
 uniform vec3 camPos;
 
 uniform sampler2D texture1;  // more: sampler1D, sampler3D
@@ -24,7 +24,7 @@ void main()
 
     // Diffuse lighting
     vec3 norm = normalize(Normal);
-    //vec3 lightDir = normalize(lightPos - FragPos);                // point light (comment this line if you use single-direction light)
+    vec3 lightDir = normalize(lightPos - FragPos);                // point light (comment this line if you use directional light)
     vec3 diffuse = max(dot(norm, lightDir), 0.0) * lightColor;
 
     // Specular lighting

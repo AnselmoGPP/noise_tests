@@ -8,10 +8,14 @@
 /// Camera movement type. Used for indicating movement direction in ProcessKeyboard()
 enum Camera_Movement { FORWARD, BACKWARD, LEFT, RIGHT };
 
+// Window size
+const unsigned int SCR_WIDTH  = 1920 / 2;
+const unsigned int SCR_HEIGHT = 1080 / 2;
+
 // Default camera values
 const float YAW         =  90.0f;   ///< Initial camera yaw
 const float PITCH       = -50.0f;   ///< Initial camera pitch
-const float SPEED       =  30.0f;   ///< Initial camera speed
+const float SPEED       =  100.0f;  ///< Initial camera speed
 const float SENSITIVITY =  0.1f;    ///< Initial mouse sensitivity
 const float SCROLLSPEED =  4.f;     ///< Initial scroll speed
 const float FOV         =  60.0f;   ///< Initial FOV (field of view)
@@ -39,6 +43,9 @@ public:
     float MouseSensitivity;     ///< Mouse sensitivity
     float scrollSpeed;          ///< Scroll speed
     float fov;                  ///< FOV (field of view)
+    // Screen
+    int width;                  ///< Window width in pixels
+    int height;                 ///< Window height in pixels
 
     /**
      * @brief Construction using vectors
@@ -48,7 +55,11 @@ public:
      * @param pitch Camera pitch
      * @param roll Camera roll
      */
-    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f), float yaw = YAW, float pitch = PITCH);
+    Camera( glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f),
+            float yaw = YAW,
+            float pitch = PITCH
+          );
 
     /**
      * @brief Construction using scalar values
@@ -66,6 +77,9 @@ public:
 
     /// Returns view matrix
     glm::mat4 GetViewMatrix();
+
+    /// Returns projection matrix (if it doesn't change each frame, it can be called outside the render loop)
+    glm::mat4 GetProjectionMatrix();
 
     /**
      * @brief Processes input received from any keyboard-like input system

@@ -22,7 +22,7 @@
 #include "geometry.hpp"
 #include "myGUI.hpp"
 #include "canvas.hpp"
-#include "parameters.hpp"
+#include "global.hpp"
 
 // Function declarations --------------------
 
@@ -35,9 +35,10 @@ void processInput(GLFWwindow *window);
 void GUI_terrainConfig();
 void printOGLdata();
 
-void setUniforms(Shader &program, unsigned texture);
+void setUniformsTerrain(Shader &program, unsigned texture);
 void setUniformsAxis(Shader& program);
 void setUniformsWater(Shader& program);
+void setUniformsLightSource(Shader& program);
 
 // Function definitions --------------------
 
@@ -134,7 +135,7 @@ int main()
 
     unsigned int VAO = createVAO();
     unsigned int VBO = createVBO(sizeof(float)*terrain.getNumVertex()*11, terrain.vertex, GL_STATIC_DRAW);
-    unsigned int EBO = createEBO(sizeof(unsigned int)*terrain.getNumIndices(), terrain.indices, GL_STATIC_DRAW);
+    unsigned int EBO = createEBO(sizeof(unsigned)*terrain.getNumIndices(), terrain.indices, GL_STATIC_DRAW);
 
     int sizesAtribsTerrain[4] = { 3, 3, 2, 3 };
     configVAO(VAO, VBO, EBO, sizesAtribsTerrain, 4);
@@ -146,11 +147,11 @@ int main()
     // >>> Axis
 
     float coordSys[12][3];
-    fillAxis(coordSys, 128);
+    fillAxis(coordSys, 256);
 
     Shader axisProg(
-        "../../../projects/tester_2/shaders/axis.vs",
-        "../../../projects/tester_2/shaders/axis.fs");
+        "../../../projects/tester_2/shaders/vertexVec3_colorVec3.vs",
+        "../../../projects/tester_2/shaders/vertexVec3_colorVec3.fs");
 
     unsigned axisVAO = createVAO();
     unsigned axisVBO = createVBO(sizeof(float) * 12 * 3, &coordSys[0][0], GL_STATIC_DRAW);
@@ -158,21 +159,34 @@ int main()
     int sizesAtribsAxis[2] = { 3, 3 };
     configVAO(axisVAO, axisVBO, sizesAtribsAxis, 2);
 
+    // >>> Light source (icosahedron)
+    Icosahedron icos;
+
+    Shader lsProg(
+        "../../../projects/tester_2/shaders/vertexVec3_colorUnifVec4.vs",
+        "../../../projects/tester_2/shaders/vertexVec3_colorUnifVec4.fs");
+
+    unsigned lsVAO = createVAO();
+    unsigned lsVBO = createVBO(sizeof(float) * icos.numVertices, icos.vertices, GL_STATIC_DRAW);
+    unsigned int lsEBO = createEBO(sizeof(unsigned)*icos.numIndices, icos.indices, GL_STATIC_DRAW);
+
+    int sizesAtribsLightSource[1] = { 3 };
+    configVAO(lsVAO, lsVBO, lsEBO, sizesAtribsLightSource, 1);
+
     // >>> Water
 
     Shader waterProg(
-        "../../../projects/tester_2/shaders/water.vs",
-        "../../../projects/tester_2/shaders/water.fs");
+        "../../../projects/tester_2/shaders/vertexVec3_colorVec4_normalVec3.vs",
+        "../../../projects/tester_2/shaders/vertexVec3_colorVec4_normalVec3.fs");
 
     float water[6][10];
-    fillSea(water, seaLevel, 0, 0, 127, 127);
+    fillSea(water, seaLevel, 0.8f, 0, 0, 127, 127);
 
     unsigned waterVAO = createVAO();
     unsigned waterVBO = createVBO(sizeof(float) * 6 * 10, &water[0][0], GL_STATIC_DRAW);
 
     int sizesAtribsWater[3] = { 3, 4, 3 };
     configVAO(waterVAO, waterVBO, sizesAtribsWater, 3);
-
 
     // ----- Load and create a texture
 /*
@@ -235,14 +249,14 @@ int main()
             newTerrain = false;
         }
 
-        setUniforms(terrProgram, texture1);
+        setUniformsTerrain(terrProgram, texture1);
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, terrain.getNumIndices(), GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // >>> Water
         if(water[4][0] != terrain.getXside() || water[4][1] != terrain.getYside() || water[0][2] != seaLevel)
         {
-            fillSea(water, seaLevel, 0., 0., terrain.getXside()-1, terrain.getYside()-1);
+            fillSea(water, seaLevel, 0.8f, 0., 0., terrain.getXside()-1, terrain.getYside()-1);
 
             glBindVertexArray(waterVAO);
             glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
@@ -258,38 +272,11 @@ int main()
         glBindVertexArray(axisVAO);
         glDrawArrays(GL_LINES, 0, 6);
 
+        // >>> Light source
+        setUniformsLightSource(lsProg);
+        glBindVertexArray(lsVAO);
+        glDrawElements(GL_TRIANGLES, icos.numIndices, GL_UNSIGNED_INT, nullptr);
 
-        /*
-        glBindVertexArray(VAO);
-        for(unsigned i = 0; i < 10; i++)
-        {
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, cubePositions[i]);
-            model = glm::rotate(model, currentTime * glm::radians(20.0f * i), glm::vec3(1.0f, 0.3f, 0.5f));
-            model = glm::scale(model, glm::vec3(1.0, 1.0, 1.0));
-            glUniformMatrix4fv(glGetUniformLocation(myProgram.ID, "model"), 1, GL_FALSE, glm::value_ptr(model));
-
-            glDrawArrays(GL_TRIANGLES, 0, 6*2*3);
-            //glDrawElements(GL_TRIANGLES, 3*12, GL_UNSIGNED_INT, nullptr);
-        }
-        */
-/*
-        lightSourceProgram.UseProgram();
-        lightSourceProgram.setMat4("projection", projection);
-        lightSourceProgram.setMat4("view", view);
-
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, lightPos);
-        model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
-        model = glm::scale(model, glm::vec3(0.2f));
-        lightSourceProgram.setMat4("model", model);
-
-        normalMatrix = glm::mat3(model);
-        lightingProgram.setMat3("normalMatrix", normalMatrix);
-
-        glBindVertexArray(lightSourceVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-*/
         // GUI
         gui.render();
 
@@ -318,6 +305,11 @@ int main()
     glDeleteVertexArrays(1, &waterVAO);
     glDeleteBuffers(1, &waterVBO);
     glDeleteProgram(waterProg.ID);
+
+    glDeleteVertexArrays(1, &lsVAO);
+    glDeleteBuffers(1, &lsVBO);
+    glDeleteBuffers(1, &lsEBO);
+    glDeleteProgram(lsProg.ID);
     
     // GUI
     gui.cleanup();
@@ -334,7 +326,10 @@ void framebuffer_resize_callback(GLFWwindow* window, int width, int height)
 {
     //glfwGetFramebufferSize(window, &width, &height);  // Get viewport size from GLFW
     glViewport(0, 0, width, height);                    // Tell OGL the viewport size
+
     // projection adjustments
+    cam.width = width;
+    cam.height = height;
 }
 
 // Process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -460,7 +455,7 @@ void GUI_terrainConfig()
     ImGui::SliderFloat("Sea level", &seaLevel, 0, 128);
 
     ImGui::Text("Camera: ");
-    ImGui::SliderFloat("Speed", &cam.MovementSpeed, 0, 150);
+    ImGui::SliderFloat("Speed", &cam.MovementSpeed, 0, 200);
 
     //ImGui::ColorEdit3("clear color", (float*)&clear_color);
     //if (ImGui::Button("Button")) counter++;  ImGui::SameLine();  ImGui::Text("counter = %d", counter);
@@ -478,7 +473,7 @@ void GUI_terrainConfig()
     }
 }
 
-void setUniforms(Shader &program, unsigned texture)
+void setUniformsTerrain(Shader &program, unsigned texture)
 {
     program.UseProgram();
 
@@ -496,7 +491,34 @@ void setUniforms(Shader &program, unsigned texture)
     //glBindTexture(GL_TEXTURE_2D, texture2);
 
     // Vertex shader uniforms
-    glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
+    glm::mat4 projection = cam.GetProjectionMatrix();
+    program.setMat4("projection", projection);
+
+    glm::mat4 view = cam.GetViewMatrix();
+    program.setMat4("view", view);
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+    program.setMat4("model", model);
+
+    glm::mat3 normalMatrix = glm::mat3( glm::transpose(glm::inverse(model)) );      // Used when the model matrix applies non-uniform scaling (normal won't be scaled correctly). Otherwise, use glm::vec3(model)
+    program.setMat3("normalMatrix", normalMatrix);
+}
+
+void setUniformsWater(Shader& program)
+{
+    program.UseProgram();
+
+    // Fragment shader uniforms
+    program.setVec3("lightColor", lightCol);
+    program.setVec3("lightPos", lightPos);
+    program.setVec3("lightDir", lightDir);
+    program.setVec3("camPos", cam.Position);
+
+    // Vertex shader uniforms
+    glm::mat4 projection = cam.GetProjectionMatrix();
     program.setMat4("projection", projection);
 
     glm::mat4 view = cam.GetViewMatrix();
@@ -517,7 +539,7 @@ void setUniformsAxis(Shader& program)
     program.UseProgram();
 
     // Vertex shader uniforms
-    glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
+    glm::mat4 projection = cam.GetProjectionMatrix();
     program.setMat4("projection", projection);
 
     glm::mat4 view = cam.GetViewMatrix();
@@ -530,31 +552,23 @@ void setUniformsAxis(Shader& program)
     program.setMat4("model", model);
 }
 
-void setUniformsWater(Shader& program)
+void setUniformsLightSource(Shader& program)
 {
     program.UseProgram();
 
     // Fragment shader uniforms
-    program.setVec3("lightColor", lightCol);
-    program.setVec3("lightPos", lightPos);
-    program.setVec3("lightDir", lightDir);
-    program.setVec3("camPos", cam.Position);
+    program.setVec4("lightColor", glm::vec4(lightCol, 1.f));
 
     // Vertex shader uniforms
-    glm::mat4 projection = glm::perspective(glm::radians(cam.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f); // If it doesn't change each frame, it can be placed outside the render loop
+    glm::mat4 projection = cam.GetProjectionMatrix();
     program.setMat4("projection", projection);
 
     glm::mat4 view = cam.GetViewMatrix();
     program.setMat4("view", view);
 
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+    model = glm::translate(model, lightPos);
     model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
-    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+    model = glm::scale(model, glm::vec3(50.0f, 50.0f, 50.0f));
     program.setMat4("model", model);
-
-    glm::mat3 normalMatrix = glm::mat3( glm::transpose(glm::inverse(model)) );      // Used when the model matrix applies non-uniform scaling (normal won't be scaled correctly). Otherwise, use glm::vec3(model)
-    program.setMat3("normalMatrix", normalMatrix);
 }
-
-

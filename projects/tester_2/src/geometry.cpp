@@ -157,15 +157,15 @@ float noiseSet::GetNoise(float X, float Y)
         X = (X / scale) * frequency + octaveOffsets[i][0];
         Y = (Y / scale) * frequency + octaveOffsets[i][1];
 
-        result += ((1 + noise.GetNoise(X, Y)) / 2) * amplitude;   // noise.GetNoise() returns in range [-1, 1]. We convert it to [0, 1]
+        float basicNoise = ((1 + noise.GetNoise(X, Y)) / 2);        // noise.GetNoise() returns in range [-1, 1]. We convert it to [0, 1]
+        float curveFactor = std::pow(basicNoise, curveDegree);
+        result += basicNoise * curveFactor * amplitude;
 
         frequency *= lacunarity;
         amplitude *= persistance;
     }
 
-    float curveFactor = std::pow(result, curveDegree);
-
-    return result * curveFactor * scale * multiplier;
+    return result * scale * multiplier;
 }
 
 float                 noiseSet::getMaxHeight() const { return maxHeight; };
@@ -376,9 +376,9 @@ void fillAxis(float array[12][3], float sizeOfAxis)
     array[11][2] = 1.f;
 }
 
-void fillSea(float array[6][10], float height, float x0, float y0, float x1, float y1)
+void fillSea(float array[6][10], float height, float transparency, float x0, float y0, float x1, float y1)
 {
-    float color[4] = { 0.1f, 0.1f, 0.8f, 0.9 };
+    float color[4] = { 0.1f, 0.1f, 0.8f, transparency };
 
     array[0][0] = x0;
     array[0][1] = y0;
@@ -446,3 +446,26 @@ void fillSea(float array[6][10], float height, float x0, float y0, float x1, flo
     array[5][8] = 0;
     array[5][9] = 1;
 }
+
+void fillCubicSphere(float*** array, unsigned*** indices, float radius, unsigned numVertexPerSide, float R, float G, float B)
+{
+    float *** vertex = array;        //float array[6][numVertexPerSide * numVertexPerSide][6]
+    unsigned *** ind = indices;      //unsigned indices[6][(numVertexPerSide-1)*(numVertexPerSide-1)*2][3]
+
+    // Get position, color and normals
+
+    for(size_t i = 0; i < numVertexPerSide; i++)
+    {
+
+    }
+
+
+
+
+    // Get indices
+
+
+
+
+}
+
