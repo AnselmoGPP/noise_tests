@@ -5,8 +5,17 @@ Function for normals generation (and more encapsulations?)
 LOD > Endless terrain (pixel circle) > Threading > Change resolution depending on distance from the viewer >
 > not updating chunks in every frame (make the viewer move some distance before doing it (viewerMoveThresholdForChunckUpdate)) (remember that getting the square distance is faster than actual distance)
 
+Pixel area (border's normals) (different LOD areas joints)
+
 learnopengl
 fog
+
+Bug:   terrainGenerator terrX = (worldChunks.chunkDict[k]);     // double free or corruption (!prev)
+
+--- Visual code ------------------
+Doesn't detect macros declared in CMakeLists.txt
+Doesn't have key combination for "save all"
+
 ----------------------------------
 
 Doxygen comments (including documenting files)
