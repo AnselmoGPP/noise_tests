@@ -9,22 +9,30 @@
 // Settings (typedef and global data section)
 
 // camera --------------------
-Camera cam(glm::vec3(128.0f, -30.0f, 150.0f));
-float lastX =  SCR_WIDTH  / 2.0;
-float lastY =  SCR_HEIGHT / 2.0;
-bool firstMouse = true;
-bool LMBpressed = false;
-bool mouseOverGUI = false;
+extern Camera cam(glm::vec3(128.0f, -30.0f, 150.0f));
+extern float lastX =  SCR_WIDTH  / 2.0;
+extern float lastY =  SCR_HEIGHT / 2.0;
+extern bool firstMouse = true;
+extern bool LMBpressed = false;
+extern bool mouseOverGUI = false;
 
 // timing --------------------
-timerSet timer(30);
+extern timerSet timer(30);
 
 // Terrain data --------------------
-noiseSet noise;
+extern noiseSet noise;
 //terrainGenerator terrain(noise, 0, 0, 1, 256, 256);
-terrainChunks worldChunks(noise, 10, 5, 6);
-bool newTerrain = true;
-float seaLevel = 0;
+extern terrainChunks worldChunks(noise, 200, 25, 26);
+extern bool newTerrain = true;
+extern float seaLevel = 0;
+
+// Fog --------------------
+extern float minRadius = 150;
+extern float maxRadius = 200;
+
+// Paths --------------------
+extern std::string path_shaders  = "../../../projects/player/shaders/";
+extern std::string path_textures = "../../../textures/";
 
 // Lighting --------------------
 
@@ -52,15 +60,16 @@ struct light
     float       outerCutOff; ///< Smooth edges will be computed for the area between cutOff and outerCutOff (cosine)
 };
 
-light sun(directional,
-          glm::vec3(-557.f, 577.f, 577.f),
-          glm::vec3(-0.57735f, 0.57735f, 0.57735f),
-          glm::vec3(0.1f),
-          glm::vec3(1.f),
-          glm::vec3(1.f),
-          1.0f, 0.0014f, 0.000007f,
-          glm::cos(glm::radians(12.5f)),
-          glm::cos(glm::radians(14.5f)) );
+extern light sun(directional,
+                 glm::vec3(-557.f, 577.f, 577.f),
+                 glm::vec3(-0.57735f, 0.57735f, 0.57735f),
+                 glm::vec3(0.1f),
+                 glm::vec3(1.f),
+                 glm::vec3(1.f),
+                 1.0f, 0.0014f, 0.000007f,
+                 glm::cos(glm::radians(12.5f)),
+                 glm::cos(glm::radians(14.5f)) );
+
 /*
     Usual attenuation values:
      |Range|Constant|Linear|Cuadratic|
@@ -78,7 +87,6 @@ light sun(directional,
       7     1.0      0.7     1.8
  */
 
-
 // Materials --------------------
 
 struct material
@@ -93,16 +101,20 @@ struct material
     float shininess;        ///< More == Smaller reflection
 };
 
-material water(glm::vec3(0.1f, 0.1f, 0.8f),
-               glm::vec3(0.5),
-               32 );
+extern material water( glm::vec3(0.1f, 0.1f, 0.8f),
+                       glm::vec3(0.5),
+                       32 );
 
-material grass(glm::vec3(0.1f, 0.6f, 0.1f),
-               glm::vec3(0.5),
-               32 );
+extern material grass( glm::vec3(0.1f, 0.6f, 0.1f),
+                       glm::vec3(0.5),
+                       32 );
 
-material rock( glm::vec3(0.2f, 0.2f, 0.2f),
-               glm::vec3(0.2),
-               32 );
+extern material rock( glm::vec3(0.2f, 0.2f, 0.2f),
+                      glm::vec3(0.2),
+                      32 );
+
+extern material snow( glm::vec3(0.2f, 0.2f, 0.2f),
+                      glm::vec3(0.2),
+                      32 );
 
 #endif

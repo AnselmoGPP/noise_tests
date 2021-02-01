@@ -2,10 +2,6 @@
 #include <iostream>
 #include <cmath>
 
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
-
 #include "geometry.hpp"
 
 // noiseSet -----------------------------------------------------------------
@@ -299,12 +295,12 @@ void terrainGenerator::computeTerrain(noiseSet &noise, float x0, float y0, float
             vertex[pos][2] = noise.GetNoise((float)vertex[pos][0], (float)vertex[pos][1]);
 
             // textures
-            vertex[pos][3] = x * textureFactor;
-            vertex[pos][4] = y * textureFactor;
+            vertex[pos][3] = vertex[pos][0] * textureFactor;
+            vertex[pos][4] = vertex[pos][1] * textureFactor;
         }
 
     // Normals
-    computeGridNormals(vertex, numVertexX, numVertexY);
+    computeGridNormals(vertex, numVertexX, numVertexY, stride, noise);
 
     // Indices
     size_t index = 0;
@@ -324,7 +320,7 @@ void terrainGenerator::computeTerrain(noiseSet &noise, float x0, float y0, float
         }
 }
 
-void terrainGenerator::computeGridNormals(float (*vertex)[8], unsigned numVertexX, unsigned numVertexY)
+void terrainGenerator::computeGridNormals(float (*vertex)[8], unsigned numVertexX, unsigned numVertexY, float stride, noiseSet &noise)
 {
     // Initialize normals to 0
     unsigned numVertex = numVertexX * numVertexY;
@@ -347,17 +343,23 @@ void terrainGenerator::computeGridNormals(float (*vertex)[8], unsigned numVertex
                            Aside
              */
 
-            // Vertex positions
-            size_t A = getPos(x, y);
-            size_t B = getPos(x + 1, y);
-            size_t C = getPos(x + 1, y + 1);
-            size_t D = getPos(x, y + 1);
+            // Vertex positions in the array
+            size_t posA = getPos(x, y);
+            size_t posB = getPos(x + 1, y);
+            size_t posC = getPos(x + 1, y + 1);
+            size_t posD = getPos(x, y + 1);
+
+            // Vertex vectors
+            glm::vec3 A = getVertex(posA);
+            glm::vec3 B = getVertex(posB);
+            glm::vec3 C = getVertex(posC);
+            glm::vec3 D = getVertex(posD);
 
             // Vector representing each side
-            glm::vec3 Aside = glm::vec3(vertex[B][0], vertex[B][1], vertex[B][2]) - glm::vec3(vertex[A][0], vertex[A][1], vertex[A][2]);
-            glm::vec3 Bside = glm::vec3(vertex[B][0], vertex[B][1], vertex[B][2]) - glm::vec3(vertex[C][0], vertex[C][1], vertex[C][2]);
-            glm::vec3 Cside = glm::vec3(vertex[C][0], vertex[C][1], vertex[C][2]) - glm::vec3(vertex[D][0], vertex[D][1], vertex[D][2]);
-            glm::vec3 Dside = glm::vec3(vertex[A][0], vertex[A][1], vertex[A][2]) - glm::vec3(vertex[D][0], vertex[D][1], vertex[D][2]);
+            glm::vec3 Aside = B - A;
+            glm::vec3 Bside = B - C;
+            glm::vec3 Cside = C - D;
+            glm::vec3 Dside = A - D;
 
             // Normal computed for each vertex from the two side vectors it has attached
             glm::vec3 Anormal = glm::cross( Aside, -Dside);
@@ -366,11 +368,150 @@ void terrainGenerator::computeGridNormals(float (*vertex)[8], unsigned numVertex
             glm::vec3 Dnormal = glm::cross( Dside,  Cside);
 
             // Add to the existing normal of the vertex
-            tempNormals[A] += Anormal;
-            tempNormals[B] += Bnormal;
-            tempNormals[C] += Cnormal;
-            tempNormals[D] += Dnormal;
+            tempNormals[posA] += Anormal;
+            tempNormals[posB] += Bnormal;
+            tempNormals[posC] += Cnormal;
+            tempNormals[posD] += Dnormal;
         }
+
+    // Special cases: Vertex at the border
+    for (size_t y = 1; y < numVertexY - 1; y++)
+    {
+        size_t pos;
+        glm::vec3 up, down, left, right, center;
+
+        // Left side:
+        //     -Vertex vectors
+        pos    = getPos(0, y);
+        center = getVertex(pos);
+        up     = getVertex(getPos(0, y + 1));
+        down   = getVertex(getPos(0, y - 1));
+        left   = glm::vec3( center.x - stride, center.y, noise.GetNoise(center.x - stride, center.y) );
+
+        //     -Vector representing each side
+        up   = up   - center;
+        left = left - center;
+        down = down - center;
+
+        //     -Add normals to the existing normal of the vertex
+        tempNormals[pos] += glm::cross(up, left) + glm::cross(left, down);
+
+        // Right side:
+        //     -Vertex vectors
+        pos    = getPos(numVertexX-1, y);
+        center = getVertex(pos);
+        up     = getVertex(getPos(numVertexX-1, y + 1));
+        down   = getVertex(getPos(numVertexX-1, y - 1));
+        right  = glm::vec3( center.x + stride, center.y, noise.GetNoise(center.x + stride, center.y) );
+
+        //     -Vector representing each side
+        up    = up    - center;
+        right = right - center;
+        down  = down  - center;
+
+        //     -Add normals to the existing normal of the vertex
+        tempNormals[pos] += glm::cross(right, up) + glm::cross(down, right);
+    }
+
+    for (size_t x = 1; x < numVertexX - 1; x++)
+    {
+        size_t pos;
+        glm::vec3 up, down, left, right, center;
+
+        // Down side:
+        //     -Vertex vectors
+        pos    = getPos(x, 0);
+        center = getVertex(pos);
+        right  = getVertex(getPos(x + 1, 0));
+        left   = getVertex(getPos(x - 1, 0));
+        down   = glm::vec3( center.x, center.y - stride, noise.GetNoise(center.x, center.y - stride) );
+
+        //     -Vector representing each side
+        right = right - center;
+        left  = left  - center;
+        down  = down  - center;
+
+        //     -Add normals to the existing normal of the vertex
+        tempNormals[pos] += glm::cross(left, down) + glm::cross(down, right);
+
+        // Upper side:
+        //     -Vertex vectors
+        pos    = getPos(x, numVertexY - 1);
+        center = getVertex(pos);
+        right  = getVertex(getPos(x + 1, numVertexY - 1));
+        left   = getVertex(getPos(x - 1, numVertexY - 1));
+        up     = glm::vec3( center.x, center.y + stride, noise.GetNoise(center.x, center.y + stride) );
+
+        //     -Vector representing each side
+        right = right - center;
+        left  = left  - center;
+        up    = up    - center;
+
+        //     -Add normals to the existing normal of the vertex
+        tempNormals[pos] += glm::cross(up, left) + glm::cross(right, up);
+    }
+
+    //     -Corners
+    glm::vec3 topLeft, topRight, lowLeft, lowRight;
+    glm::vec3 right, left, up, down;
+    size_t pos;
+
+    pos     = getPos(0, numVertexY-1);
+    topLeft = getVertex(pos);
+    right   = getVertex(getPos(1, numVertexY-1));
+    down    = getVertex(getPos(0, numVertexY-2));
+    up      = glm::vec3(topLeft.x, topLeft.y + stride, noise.GetNoise(topLeft.x, topLeft.y + stride));
+    left    = glm::vec3(topLeft.x - stride, topLeft.y, noise.GetNoise(topLeft.x - stride, topLeft.y));
+
+    right = right - topLeft;
+    left  = left  - topLeft;
+    up    = up    - topLeft;
+    down  = down  - topLeft;
+
+    tempNormals[pos] += glm::cross(right, up) + glm::cross(up, left) + glm::cross(left, down);
+
+    pos      = getPos(numVertexX-1, numVertexY-1);
+    topRight = getVertex(pos);
+    down     = getVertex(getPos(numVertexX - 1, numVertexY-2));
+    left     = getVertex(getPos(numVertexX - 2, numVertexY-1));
+    right    = glm::vec3(topRight.x + stride, topRight.y, noise.GetNoise(topRight.x + stride, topRight.y));
+    up       = glm::vec3(topRight.x, topRight.y + stride, noise.GetNoise(topRight.x, topRight.y + stride));
+
+
+    right = right - topRight;
+    left  = left  - topRight;
+    up    = up    - topRight;
+    down  = down  - topRight;
+
+    tempNormals[pos] += glm::cross(down, right) + glm::cross(right, up) + glm::cross(up, left);
+
+    pos      = getPos(0, 0);
+    lowLeft  = getVertex(pos);
+    right    = getVertex(getPos(1, 0));
+    up       = getVertex(getPos(0, 1));
+    down     = glm::vec3(lowLeft.x, lowLeft.y - stride, noise.GetNoise(lowLeft.x, lowLeft.y - stride));
+    left     = glm::vec3(lowLeft.x - stride, lowLeft.y, noise.GetNoise(lowLeft.x - stride, lowLeft.y));
+
+    right = right - lowLeft;
+    left  = left  - lowLeft;
+    up    = up    - lowLeft;
+    down  = down  - lowLeft;
+
+    tempNormals[pos] += glm::cross(up, left) + glm::cross(left, down) + glm::cross(down, right);
+
+    pos      = getPos(numVertexX - 1, 0);
+    lowRight = getVertex(pos);
+    right    = glm::vec3(lowRight.x + stride, lowRight.y, noise.GetNoise(lowRight.x + 1, lowRight.y));
+    up       = getVertex(getPos(numVertexX - 1, 1));
+    down     = glm::vec3(lowRight.x, lowRight.y - stride, noise.GetNoise(lowRight.x, lowRight.y - stride));
+    left     = getVertex(getPos(numVertexX - 2, 0));
+
+    right = right - lowRight;
+    left  = left  - lowRight;
+    up    = up    - lowRight;
+    down  = down  - lowRight;
+
+    tempNormals[pos] += glm::cross(left, down) + glm::cross(down, right) + glm::cross(right, up);
 
     // Normalize the normals
     for (int i = 0; i < numVertex; i++)
@@ -391,6 +532,11 @@ unsigned terrainGenerator::getNumVertex() const { return numVertex; }
 unsigned terrainGenerator::getNumIndices() const { return numIndices; }
 
 size_t terrainGenerator::getPos(size_t x, size_t y) const { return y * numVertexX + x; }
+
+glm::vec3 terrainGenerator::getVertex(size_t position) const
+{
+    return glm::vec3( vertex[position][0], vertex[position][1], vertex[position][2] );
+}
 
 // ----------------------------------------------------------------------------------
 

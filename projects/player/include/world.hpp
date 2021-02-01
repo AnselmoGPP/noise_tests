@@ -11,7 +11,7 @@
 
 #include "geometry.hpp"
 
-/// Bbidimensional index (x, y) that satisfies the "Compare" set of requirements for its use in std::map.
+/// Bidimensional index (x, y) that satisfies the "Compare" set of requirements for its use in std::map.
 class BinaryKey
 {
 public:

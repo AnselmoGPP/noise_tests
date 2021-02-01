@@ -1,10 +1,11 @@
-/*
+﻿/*
  *  https://stackoverflow.com/questions/57336940/how-to-glutdisplayfunc-glutmainloop-in-glfw
  */
 
 // Includes --------------------
 
 #include <iostream>
+#include <exception>
 
 //#define IMGUI_IMPL_OPENGL_LOADER_GLAD 1
 #ifdef IMGUI_IMPL_OPENGL_LOADER_GLEW
@@ -130,14 +131,12 @@ int main()
     // ----- Set up vertex data, buffers, and configure vertex attributes
 
     // >>> Terrain
-
     Shader terrProgram(
-        "../../../projects/player/shaders/vertexShader.vs",
-        "../../../projects/player/shaders/fragmentShader.fs");
+        (path_shaders + "vertexShader.vs").c_str(),
+        (path_shaders + "fragmentShader.fs").c_str() );
 
     worldChunks.updateVisibleChunks(cam.Position);
 
-/*
     std::map<BinaryKey, unsigned int> VAO;
     std::map<BinaryKey, unsigned int> VBO;
     std::map<BinaryKey, unsigned int> EBO;
@@ -148,20 +147,12 @@ int main()
     {
         BinaryKey key = it->first;
 
-        //VAO.push_back(createVAO());
-        //VAO.insert( {key, createVAO()} );
         VAO[key] = createVAO();
 
-        //VBO.push_back( createVBO(sizeof(float) * worldTerrain.getNumVertex() * 8,
-        //                         worldTerrain.chunkDict[key].vertex,
-        //                         GL_STATIC_DRAW) );
         VBO[key] = createVBO( sizeof(float) * worldChunks.getNumVertex() * 8,
                               worldChunks.chunkDict[key].vertex,
                               GL_STATIC_DRAW );
 
-        //EBO.push_back( createEBO(sizeof(unsigned) * worldTerrain.getNumIndices(),
-        //                         worldTerrain.chunkDict[key].indices,
-        //                         GL_STATIC_DRAW) );
         EBO[key] = createEBO(sizeof(unsigned) * worldChunks.getNumIndices(),
                              worldChunks.chunkDict[key].indices,
                              GL_STATIC_DRAW );
@@ -169,16 +160,14 @@ int main()
         int sizesAttribs[3] = {3, 2, 3};
         configVAO( VAO[key], VBO[key], EBO[key], sizesAttribs, 3 );
     }
-*/
 
-BinaryKey k = worldChunks.chunkDict.begin()->first;
-terrainGenerator *terrain = &(worldChunks.chunkDict[k]);
+//BinaryKey k = worldChunks.chunkDict.begin()->first;
+//terrainGenerator *terrain = &(worldChunks.chunkDict[k]);
 
-// Bug test (BUG: "double free or corruption (!prev)" Looks like terrX.vertex points to another array that is later deleted)
-terrainGenerator terrX = (worldChunks.chunkDict[k]);
-for(int i = 0; i < terrX.getNumVertex(); ++i)
-    std::cout << terrX.vertex[i][0] << ", " << terrX.vertex[i][1] << std::endl;
-
+    // Bug test (BUG: "double free or corruption (!prev)" Looks like terrX.vertex points to another array that is later deleted)
+    //terrainGenerator terrX = (worldChunks.chunkDict[k]);
+    //for(int i = 0; i < terrX.getNumVertex(); ++i)
+    //    std::cout << terrX.vertex[i][0] << ", " << terrX.vertex[i][1] << std::endl;
 
 //std::cout << "(" << k.x << ", " << k.y << ")--------------------------" << std::endl;
 //for(unsigned i = 0; i < terrain.getNumVertex(); i++)
@@ -190,13 +179,14 @@ for(int i = 0; i < terrX.getNumVertex(); ++i)
 
 //std::cout << "vertex: " << terrain.getNumVertex() << ",  Indices: " << terrain.getNumIndices() << std::endl;
 
+/*
     unsigned int VAO = createVAO();
     unsigned int VBO = createVBO(sizeof(float)*terrain->getNumVertex()*8, terrain->vertex, GL_STATIC_DRAW);
     unsigned int EBO = createEBO(sizeof(unsigned)*terrain->getNumIndices(), terrain->indices, GL_STATIC_DRAW);
 
     int sizesAtribsTerrain[3] = { 3, 2, 3 };
     configVAO(VAO, VBO, EBO, sizesAtribsTerrain, 3);
-
+*/
     /*
     unsigned int VAO = createVAO();
     unsigned int VBO = createVBO(sizeof(float)*terrain.getNumVertex()*11, terrain.vertex, GL_STATIC_DRAW);
@@ -206,10 +196,10 @@ for(int i = 0; i < terrX.getNumVertex(); ++i)
     configVAO(VAO, VBO, EBO, sizesAtribsTerrain, 4);
     */
 
-    grass.diffuseT  = createTexture2D("../../../textures/grass.png", GL_RGB);
-    grass.specularT = createTexture2D("../../../textures/grass_specular.png", GL_RGB);
-    rock.diffuseT   = createTexture2D("../../../textures/rock.jpg", GL_RGB);
-    rock.specularT  = createTexture2D("../../../textures/rock_specular.jpg", GL_RGB);
+    grass.diffuseT  = createTexture2D((path_textures + "grass.png").c_str(), GL_RGB);
+    grass.specularT = createTexture2D((path_textures + "grass_specular.png").c_str(), GL_RGB);
+    rock.diffuseT   = createTexture2D((path_textures + "rock.jpg").c_str(), GL_RGB);
+    rock.specularT  = createTexture2D((path_textures + "rock_specular.jpg").c_str(), GL_RGB);
     terrProgram.UseProgram();
     terrProgram.setInt("grass.diffuseT",  0);      // Tell OGL for each sampler to which texture unit it belongs to (only has to be done once)
     terrProgram.setInt("grass.specularT", 1);
@@ -222,8 +212,8 @@ for(int i = 0; i < terrX.getNumVertex(); ++i)
     fillAxis(coordSys, 256);
 
     Shader axisProg(
-        "../../../projects/player/shaders/vertexVec3_colorVec3.vs",
-        "../../../projects/player/shaders/vertexVec3_colorVec3.fs");
+        (path_shaders + "vertexVec3_colorVec3.vs").c_str(),
+        (path_shaders + "vertexVec3_colorVec3.fs").c_str() );
 
     unsigned axisVAO = createVAO();
     unsigned axisVBO = createVBO(sizeof(float) * 6 * 6, &coordSys[0][0], GL_STATIC_DRAW);
@@ -235,11 +225,11 @@ for(int i = 0; i < terrX.getNumVertex(); ++i)
     Icosahedron icos;
 
     Shader lsProg(
-        "../../../projects/player/shaders/vertexVec3_colorUnifVec4.vs",
-        "../../../projects/player/shaders/vertexVec3_colorUnifVec4.fs");
+        (path_shaders + "vertexVec3_colorUnifVec4.vs").c_str(),
+        (path_shaders + "vertexVec3_colorUnifVec4.fs").c_str() );
 
     unsigned lsVAO = createVAO();
-    unsigned lsVBO = createVBO(sizeof(float) * icos.numVertices, icos.vertices, GL_STATIC_DRAW);
+    unsigned lsVBO = createVBO(sizeof(float) *icos.numVertices, icos.vertices, GL_STATIC_DRAW);
     unsigned int lsEBO = createEBO(sizeof(unsigned)*icos.numIndices, icos.indices, GL_STATIC_DRAW);
 
     int sizesAtribsLightSource[1] = { 3 };
@@ -248,8 +238,8 @@ for(int i = 0; i < terrX.getNumVertex(); ++i)
     // >>> Water
 
     Shader waterProg(
-        "../../../projects/player/shaders/vertexVec3_colorVec4_normalVec3.vs",
-        "../../../projects/player/shaders/vertexVec3_colorVec4_normalVec3.fs");
+        (path_shaders + "vertexVec3_colorVec4_normalVec3.vs").c_str(),
+        (path_shaders + "vertexVec3_colorVec4_normalVec3.fs").c_str() );
 
     float water[6][10];
     fillSea(water, seaLevel, 0.8f, 0, 0, 127, 127);
@@ -290,24 +280,74 @@ for(int i = 0; i < terrX.getNumVertex(); ++i)
         mouseOverGUI = gui.cursorOverGUI();
 
         // >>> Terrain
+        worldChunks.updateVisibleChunks(cam.Position);
 
-        //worldChunks.updateVisibleChunks(cam.Position);
-/*
-        for(std::map<BinaryKey, terrainGenerator>::const_iterator it = worldChunks.chunkDict.begin();
-            it != worldChunks.chunkDict.end();
+        setUniformsTerrain(terrProgram, grass.diffuseT, grass.specularT, rock.diffuseT, rock.specularT);
+
+            // Delete VAO not existing in chunks dictionary
+        std::vector<BinaryKey> delet;
+
+                // Delete VAO, VBO and EBO
+        for(std::map<BinaryKey, unsigned int>::const_iterator it = VAO.begin();
+            it != VAO.end();
             ++it)
         {
             BinaryKey key = it->first;
-//std::cout << VAO[key] << std::endl;
-            setUniformsTerrain(terrProgram, grass.diffuseT, grass.specularT, rock.diffuseT, rock.specularT);
-            glBindVertexArray(VAO[key]);
-            glDrawElements(GL_TRIANGLES, worldChunks.getNumIndices(), GL_UNSIGNED_INT, nullptr);
-        }
-*/
 
-        setUniformsTerrain(terrProgram, grass.diffuseT, grass.specularT, rock.diffuseT, rock.specularT);
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, terrain->getNumIndices(), GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
+            if(worldChunks.chunkDict.find(key) == worldChunks.chunkDict.end())
+            {
+                glDeleteVertexArrays(1, &VAO[key]);
+                glDeleteBuffers     (1, &VBO[key]);
+                glDeleteBuffers     (1, &EBO[key]);
+
+                delet.push_back(key);
+            }
+        }
+
+                // Delete fields from the std::map
+        for(size_t i = 0; i < delet.size(); i++)
+        {
+            worldChunks.chunkDict.erase(delet[i]);
+            VAO.erase(delet[i]);
+            VBO.erase(delet[i]);
+            EBO.erase(delet[i]);
+        }
+
+            // Draw elements from VAO
+        for(std::map<BinaryKey, terrainGenerator>::const_iterator it = worldChunks.chunkDict.begin();
+            it != worldChunks.chunkDict.end();
+            it++)
+        {
+            BinaryKey key = it->first;
+
+                // TODO: Creating new VAO requires (for some unknown reason) specifying "glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)" before subsequent "glDrawElements()". Otherwise, segmentation fault happens.
+            if(VAO.find(key) == VAO.end())  // If key doesn't exist, creates new field in VAO
+            {
+                VAO[key] = createVAO();
+
+                VBO[key] = createVBO( sizeof(float) * worldChunks.getNumVertex() * 8,
+                                      worldChunks.chunkDict[key].vertex,
+                                      GL_STATIC_DRAW );
+
+                EBO[key] = createEBO(sizeof(unsigned) * worldChunks.getNumIndices(),
+                                     worldChunks.chunkDict[key].indices,
+                                     GL_STATIC_DRAW );
+
+                int sizesAttribs[3] = {3, 2, 3};
+                configVAO( VAO[key], VBO[key], EBO[key], sizesAttribs, 3 );
+            }
+
+            glBindVertexArray(VAO[key]);    // TODO: Use a single VAO for all terrain chunks, if possible
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[key]);
+            glDrawElements(GL_TRIANGLES, worldChunks.getNumIndices(), GL_UNSIGNED_INT, nullptr);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        }
+
+        //std::cout << std::endl;
+
+        //setUniformsTerrain(terrProgram, grass.diffuseT, grass.specularT, rock.diffuseT, rock.specularT);
+        //glBindVertexArray(VAO);
+        //glDrawElements(GL_TRIANGLES, terrain->getNumIndices(), GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
 
 /*
         if(newTerrain)
@@ -326,8 +366,6 @@ for(int i = 0; i < terrX.getNumVertex(); ++i)
         glDrawElements(GL_TRIANGLES, terrain.getNumIndices(), GL_UNSIGNED_INT, nullptr);    //glDrawArrays(GL_TRIANGLES, 0, 36);
 */
         // >>> Water
-
-
         setUniformsWater(waterProg);
         glBindVertexArray(waterVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -340,7 +378,9 @@ for(int i = 0; i < terrX.getNumVertex(); ++i)
         // >>> Light source
         setUniformsLightSource(lsProg);
         glBindVertexArray(lsVAO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, lsEBO);
         glDrawElements(GL_TRIANGLES, icos.numIndices, GL_UNSIGNED_INT, nullptr);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
         // GUI
         gui.render();
@@ -358,9 +398,8 @@ for(int i = 0; i < terrX.getNumVertex(); ++i)
 
     // ----- De-allocate all resources
 
-    /*
-    for(std::map<BinaryKey, terrainGenerator>::const_iterator it = worldChunks.chunkDict.begin();
-        it != worldChunks.chunkDict.end();
+    for(std::map<BinaryKey, unsigned int>::const_iterator it = VAO.begin();
+        it != VAO.end();
         ++it)
     {
         BinaryKey key = it->first;
@@ -369,7 +408,7 @@ for(int i = 0; i < terrX.getNumVertex(); ++i)
         glDeleteBuffers     (1, &EBO[key]);
     }
     glDeleteProgram(terrProgram.ID);
-    */
+
 
     glDeleteVertexArrays(1, &axisVAO);
     glDeleteBuffers(1, &axisVBO);

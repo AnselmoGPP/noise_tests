@@ -45,15 +45,17 @@ vec4 getFragColor( Light light, vec3 diffuseMap, vec3 specularMap, float shinine
 
 void main()
 {
-    float threshold = 0.6;      // grass-rock slope threshold
+    float threshold = 0.5;      // grass-rock slope threshold
     float range     = 0.05;     // threshold mixing range
     float slope     = dot( normalize(Normal), normalize(vec3(Normal.x, Normal.y, 0.0)) );
 
     float rtf = 30;             // rock texture factor
-    float gtf = 20;             // grass texture factor
+    float gtf = 20;            // grass texture factor
 
     if(slope > threshold + range)   // ROCK
     {
+        vec2 r = vec2(FragPos.x, FragPos.y);
+
         FragColor = getFragColor( sun, vec3(texture(rock.diffuseT, TexCoord/rtf)), vec3(texture(rock.specularT, TexCoord/rtf)), rock.shininess, 1.0 );
         //FragColor = getFragColor( sun, vec3(texture(rock.diffuseT, TexCoord/rtf)), rock.specular, rock.shininess, 1.0 );
     }

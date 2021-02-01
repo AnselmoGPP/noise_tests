@@ -3,6 +3,9 @@
 
 #include <random>
 
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include "FastNoiseLite.h"
 
 /*
@@ -104,8 +107,9 @@ std::ostream& operator << (std::ostream& os, const noiseSet& obj);      ///< Ope
 /// Given a noiseSet object, and the xy dimensions, generates a terrain buffer
 class terrainGenerator
 {
-    size_t getPos(size_t x, size_t y) const;
-    void computeGridNormals(float (*vertex)[8], unsigned numVertexX, unsigned numVertexY);
+    size_t    getPos(size_t x, size_t y) const;
+    glm::vec3 getVertex(size_t position) const;
+    void      computeGridNormals(float (*vertex)[8], unsigned numVertexX, unsigned numVertexY, float stride, noiseSet &noise);
 
     unsigned numVertexX;
     unsigned numVertexY;
@@ -117,7 +121,7 @@ public:
     ~terrainGenerator();                                        ///< Destructor
     terrainGenerator& operator = (const terrainGenerator& obj); ///< Operator =  overloading (copy assignment)
 
-    float (*vertex)[8];             ///< VBO (vertex position, texture coordinates, normals)
+    float        (*vertex)[8];      ///< VBO (vertex position, texture coordinates, normals)
     unsigned int (*indices)[3];     ///< EBO
 
     /*

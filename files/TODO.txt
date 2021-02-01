@@ -1,3 +1,5 @@
+String variables containing paths
+
 terrain extender beyond limits (big numbers)
 gui bar for shininess & specularStrength
 Function for normals generation (and more encapsulations?)
@@ -11,6 +13,15 @@ learnopengl
 fog
 
 Bug:   terrainGenerator terrX = (worldChunks.chunkDict[k]);     // double free or corruption (!prev)
+
+terrainChunks:
+	( ) When fixing borders normals, don't compute noise again if it can be taken from the chunk next to it
+	(X) Rounded area
+	( ) Low level of detail far away
+	(>) Follow the camera
+	( ) Don't show non-visible chunks
+	( ) Don't send again to GPU already sent chunks
+	( ) Acumulación de chuncks creciente al avanzar??
 
 --- Visual code ------------------
 Doesn't detect macros declared in CMakeLists.txt

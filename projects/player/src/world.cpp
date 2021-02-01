@@ -48,16 +48,20 @@ void terrainChunks::updateVisibleChunks(glm::vec3 viewerPos)
 
     // Delete chunks out of range
     typedef std::map<BinaryKey, terrainGenerator> dictionary;
-
     for(dictionary::const_iterator it = chunkDict.begin(); it != chunkDict.end(); ++it)
     {
         BinaryKey key = it->first;
 
-        if(key.x < viewerChunkCoord_X - chunksVisible ||
-           key.x > viewerChunkCoord_X + chunksVisible ||
-           key.y < viewerChunkCoord_Y - chunksVisible ||
-           key.y > viewerChunkCoord_Y + chunksVisible )
+        // Circular area
+        float sqrtDistInChunks = (key.x-viewerChunkCoord_X)*(key.x-viewerChunkCoord_X) + (key.y-viewerChunkCoord_Y)*(key.y-viewerChunkCoord_Y);
+        float maxSqrtDistInChunks = (chunksVisible + 0.5) * (chunksVisible + 0.5);
+        if(sqrtDistInChunks > maxSqrtDistInChunks)
             chunkDict.erase(it);
+
+        // Square area
+        //if(key.x < viewerChunkCoord_X - chunksVisible || key.x > viewerChunkCoord_X + chunksVisible ||
+        //   key.y < viewerChunkCoord_Y - chunksVisible || key.y > viewerChunkCoord_Y + chunksVisible )
+        //    chunkDict.erase(it);
     }
 
     // Save chunks in range
@@ -66,6 +70,11 @@ void terrainChunks::updateVisibleChunks(glm::vec3 viewerPos)
     for(int yOffset = viewerChunkCoord_Y - chunksVisible; yOffset <= viewerChunkCoord_Y + chunksVisible; yOffset++)
         for(int xOffset = viewerChunkCoord_X - chunksVisible; xOffset <= viewerChunkCoord_X + chunksVisible; xOffset++)
         {
+            float sqrtDistInChunks = (xOffset-viewerChunkCoord_X)*(xOffset-viewerChunkCoord_X) + (yOffset-viewerChunkCoord_Y)*(yOffset-viewerChunkCoord_Y);
+            float maxSqrtDistInChunks = (chunksVisible + 0.5) * (chunksVisible + 0.5);
+            if(sqrtDistInChunks > maxSqrtDistInChunks)
+                continue;                                       // if out of range, skip iteration
+
             BinaryKey chunkCoord(xOffset, yOffset);             // chunk name
 
             if(chunkDict.find(chunkCoord) == chunkDict.end())   // if(chunk doesn't exist in chunkDict)
@@ -77,8 +86,8 @@ void terrainChunks::updateVisibleChunks(glm::vec3 viewerPos)
                                          vertexPerSide,
                                          vertexPerSide  );
 
-                //chunkDict.insert( {chunkCoord, generator} );    // Doesn't require default constructor. If element already exists, insert does nothing
-                chunkDict[chunkCoord] = generator;                // Requires default constructor.
+                //chunkDict.insert( {chunkCoord, generator} );  // Doesn't require default constructor. If element already exists, insert does nothing
+                chunkDict[chunkCoord] = generator;              // Requires default constructor.
             }
         }
 }
