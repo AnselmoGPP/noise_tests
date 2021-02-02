@@ -73,8 +73,6 @@ TARGET_INCLUDE_DIRECTORIES( ${PROJECT_NAME} PUBLIC
 	../../extern/imgui/imgui-1.72b
 
 	../../extern/eigen-3.3.8
-
-	../../files/TODO.txt
 )
 
 if( WIN32 )

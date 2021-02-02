@@ -10,7 +10,6 @@ LOD > Endless terrain (pixel circle) > Threading > Change resolution depending o
 Pixel area (border's normals) (different LOD areas joints)
 
 learnopengl
-fog
 
 Bug:   terrainGenerator terrX = (worldChunks.chunkDict[k]);     // double free or corruption (!prev)
 
@@ -22,6 +21,7 @@ terrainChunks:
 	( ) Don't show non-visible chunks
 	( ) Don't send again to GPU already sent chunks
 	( ) Acumulación de chuncks creciente al avanzar??
+	( ) Fog
 
 --- Visual code ------------------
 Doesn't detect macros declared in CMakeLists.txt
