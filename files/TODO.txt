@@ -1,5 +1,5 @@
 String variables containing paths
-
+Progresive probability of finding certain stuff
 terrain extender beyond limits (big numbers)
 gui bar for shininess & specularStrength
 Function for normals generation (and more encapsulations?)
@@ -12,16 +12,25 @@ Pixel area (border's normals) (different LOD areas joints)
 learnopengl
 
 Bug:   terrainGenerator terrX = (worldChunks.chunkDict[k]);     // double free or corruption (!prev)
+Class encapsulation of OpenGL functions
+ImGui
+Light cast
+IS SAND REFLECTING CORRECTLY??
+Compute MVP matrices only once
+Pass parameters to the shader as uniforms (instead of hard-coding them in the shader)
+Single VAO for all chuncks
 
 terrainChunks:
+        (X) Fog
+        ( ) Don't show non-visible chunks
+        ( ) Low level of detail far away
 	( ) When fixing borders normals, don't compute noise again if it can be taken from the chunk next to it
 	(X) Rounded area
-	( ) Low level of detail far away
-	(>) Follow the camera
-	( ) Don't show non-visible chunks
-	( ) Don't send again to GPU already sent chunks
-	( ) Acumulación de chuncks creciente al avanzar??
-	( ) Fog
+	(X) Follow the camera
+	(X) Don't send again to GPU already sent chunks
+	(X) Hay acumulación de chunks creciente al avanzar?? No lo es
+	(X) Encapsular terrain rendering
+	(X) Ommit first terrain creation
 
 --- Visual code ------------------
 Doesn't detect macros declared in CMakeLists.txt

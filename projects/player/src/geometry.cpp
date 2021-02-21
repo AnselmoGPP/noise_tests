@@ -4,10 +4,19 @@
 
 #include "geometry.hpp"
 
+/*
+    Vertex data:
+         - Vertex coordinates
+         - Texture coordinates
+         - Normals
+         - Color
+
+    Indices
+*/
+
 // noiseSet -----------------------------------------------------------------
 
-noiseSet::noiseSet(
-                    unsigned int NumOctaves,
+noiseSet::noiseSet( unsigned int NumOctaves,
                     float Lacunarity,
                     float Persistance,
                     float Scale,
@@ -17,7 +26,7 @@ noiseSet::noiseSet(
                     float OffsetY,
                     FastNoiseLite::NoiseType NoiseType,
                     bool addRandomOffset,
-                    unsigned int Seed)
+                    unsigned int Seed )
 {
     // Set values
     noiseType       = NoiseType;
@@ -268,14 +277,14 @@ terrainGenerator& terrainGenerator::operator = (const terrainGenerator& obj)
     return *this;
 }
 
-void terrainGenerator::computeTerrain(noiseSet &noise, float x0, float y0, float stride, unsigned numVertex_X, unsigned numVertex_Y, float textureFactor)
+void terrainGenerator::computeTerrain(noiseSet &noise, float x0, float y0, float stride, unsigned numVertexX, unsigned numVertexY, float textureFactor)
 {
-    if (numVertexX != numVertex_X || numVertexY != numVertex_Y)
+    if (this->numVertexX != numVertexX || this->numVertexY != numVertexY)
     {
-        numVertexX = numVertex_X;
-        numVertexY = numVertex_Y;
-        numVertex  = numVertexX * numVertexY;
-        numIndices = (numVertexX - 1) * (numVertexY - 1) * 2 * 3;
+        this->numVertexX = numVertexX;
+        this->numVertexY = numVertexY;
+        this->numVertex  = numVertexX * numVertexY;
+        this->numIndices = (numVertexX - 1) * (numVertexY - 1) * 2 * 3;
 
         delete[] vertex;
         vertex = new float[numVertex][8];
@@ -587,6 +596,8 @@ void fillAxis(float array[6][6], float sizeOfAxis)
 
 void fillSea(float array[6][10], float height, float transparency, float x0, float y0, float x1, float y1)
 {
+    // 3 vertex position + 4 colors + 3 normal = 10 parameters
+
     float color[4] = { 0.1f, 0.1f, 0.8f, transparency };
 
     array[0][0] = x0;

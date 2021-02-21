@@ -38,27 +38,29 @@ public:
  */
 class terrainChunks
 {
-    noiseSet         noise;             ///< Noise generator
-    float            maxViewDist;       ///< Maximum view distance from viewer
-    float            chunkSize;         ///< Size of each chunk (meters)
-    int              chunksVisible;     ///< Number of chunkSizes for reaching maxViewDist
-    int              vertexPerSide;     ///< Number of vertex per chunk's side
-
     //glm::vec3 viewerPosition;
     //std::vector<std::vector<terrainChunk>> chunk;
     //std::vector<std::vector<glm::vec2>> chunkName;
 
 public:
-    terrainChunks(noiseSet noise, float maxViewDist, float chunkSize, unsigned vertexPerSide);
-    ~terrainChunks();
+    noiseSet noise;             ///< Noise generator
+    float    maxViewDist;       ///< Maximum view distance from viewer
+    float    chunkSize;         ///< Size of each chunk (meters)
+    int      chunksVisible;     ///< Number of chunkSizes for reaching maxViewDist
+    int      vertexPerSide;     ///< Number of vertex per chunk's side
 
     std::map<BinaryKey, terrainGenerator> chunkDict;    ///< Collection of all the chunks (as a dictionary)
+
+    terrainChunks(noiseSet noise, float maxViewDist, float chunkSize, unsigned vertexPerSide);
+    ~terrainChunks();
 
     int getNumVertex();
     int getNumIndices();
     int getMaxViewDist();
 
     void updateVisibleChunks(glm::vec3 viewerPos);
+    void updateTerrainParameters(noiseSet noise, float maxViewDist, float chunkSize, unsigned vertexPerSide);
+    void setNoise(noiseSet newNoise);
 };
 
 #endif

@@ -9,30 +9,32 @@
 // Settings (typedef and global data section)
 
 // camera --------------------
-extern Camera cam(glm::vec3(128.0f, -30.0f, 150.0f));
-extern float lastX =  SCR_WIDTH  / 2.0;
-extern float lastY =  SCR_HEIGHT / 2.0;
-extern bool firstMouse = true;
-extern bool LMBpressed = false;
-extern bool mouseOverGUI = false;
+Camera cam(glm::vec3(128.0f, -30.0f, 150.0f));
+float lastX =  SCR_WIDTH  / 2.0;
+float lastY =  SCR_HEIGHT / 2.0;
+bool firstMouse = true;
+bool LMBpressed = false;
+bool mouseOverGUI = false;
 
 // timing --------------------
-extern timerSet timer(30);
+timerSet timer(30);
 
 // Terrain data --------------------
-extern noiseSet noise;
-//terrainGenerator terrain(noise, 0, 0, 1, 256, 256);
-extern terrainChunks worldChunks(noise, 200, 25, 26);
-extern bool newTerrain = true;
-extern float seaLevel = 0;
+//noiseSet noise;
+//noiseSet noise(5, 1.5, 0.28, 1., 130, 2, 0, 0, FastNoiseLite::NoiseType_Perlin, true, 0);    // Country + Mountains
+noiseSet noise(5, 1.5, 0.28, 1., 75, 0, 0, 0, FastNoiseLite::NoiseType_Cellular, true, 0); // Desert
+terrainChunks worldChunks(noise, 300, 50, 51);
+bool newTerrain = true;
+float seaLevel = -1;
 
 // Fog --------------------
-extern float minRadius = 150;
-extern float maxRadius = 200;
+float fogMinR = 230;
+float fogMaxR = 290;
+glm::vec4 skyColor = glm::vec4(0.0f, 0.24f, 0.39f, 1.0f);
 
 // Paths --------------------
-extern std::string path_shaders  = "../../../projects/player/shaders/";
-extern std::string path_textures = "../../../textures/";
+std::string path_shaders  = "../../../projects/player/shaders/";
+std::string path_textures = "../../../textures/";
 
 // Lighting --------------------
 
@@ -56,65 +58,59 @@ struct light
     float       linear;       ///< Attenuation linear quoeficient (point/spot light)
     float       quadratic;    ///< Attenuation quadratic quoeficient (point/spot light)
 
-    float       cutOff;      ///< Maximum angle (cosine). Everything outside is not lit (spot light)
-    float       outerCutOff; ///< Smooth edges will be computed for the area between cutOff and outerCutOff (cosine)
+    float       cutOff;       ///< Maximum angle (cosine). Everything outside is not lit (spot light)
+    float       outerCutOff;  ///< Smooth edges will be computed for the area between cutOff and outerCutOff (cosine)
 };
 
-extern light sun(directional,
-                 glm::vec3(-557.f, 577.f, 577.f),
-                 glm::vec3(-0.57735f, 0.57735f, 0.57735f),
-                 glm::vec3(0.1f),
-                 glm::vec3(1.f),
-                 glm::vec3(1.f),
-                 1.0f, 0.0014f, 0.000007f,
-                 glm::cos(glm::radians(12.5f)),
-                 glm::cos(glm::radians(14.5f)) );
+light sunLight( directional,
+                glm::vec3(-557.f, 577.f, 577.f),
+                glm::vec3(-0.57735f, 0.57735f, 0.57735f),
+                glm::vec3(0.1f),
+                glm::vec3(1.f),
+                glm::vec3(1.f),
+                1.0f, 0.0014f, 0.000007f,
+                glm::cos(glm::radians(12.5f)),
+                glm::cos(glm::radians(14.5f)) );
 
 /*
     Usual attenuation values:
-     |Range|Constant|Linear|Cuadratic|
-      3250  1.0      0.0014  0.000007
-      600   1.0      0.007   0.0002
-      325   1.0      0.014   0.0007
-      200   1.0      0.022   0.0019
-      160   1.0      0.027   0.0028
-      100   1.0      0.045   0.0075
-      65    1.0      0.07    0.017
-      50    1.0      0.09    0.032
-      32    1.0      0.14    0.07
-      20    1.0      0.22    0.20
-      13    1.0      0.35    0.44
-      7     1.0      0.7     1.8
+    | Range | Constant | Linear | Cuadratic |
+      3250    1.0        0.0014    0.000007
+      600     1.0        0.007     0.0002
+      325     1.0        0.014     0.0007
+      200     1.0        0.022     0.0019
+      160     1.0        0.027     0.0028
+      100     1.0        0.045     0.0075
+      65      1.0        0.07      0.017
+      50      1.0        0.09      0.032
+      32      1.0        0.14      0.07
+      20      1.0        0.22      0.20
+      13      1.0        0.35      0.44
+      7       1.0        0.7       1.8
  */
 
 // Materials --------------------
 
 struct material
 {
+    material() { }
     material(float shin) : shininess(shin) { }
     material(glm::vec3 diff, glm::vec3 spec, float shin) : diffuse(diff), specular(spec), shininess(shin) { }
 
-    unsigned diffuseT;      ///< Diffuse texture
     glm::vec3 diffuse;      ///< Object color
-    unsigned specularT;     ///< Specular texture
     glm::vec3 specular;     ///< Less == More diffused reflection
     float shininess;        ///< More == Smaller reflection
+
+    unsigned diffuseT;      ///< Diffuse texture
+    unsigned specularT;     ///< Specular texture
 };
 
-extern material water( glm::vec3(0.1f, 0.1f, 0.8f),
-                       glm::vec3(0.5),
-                       32 );
-
-extern material grass( glm::vec3(0.1f, 0.6f, 0.1f),
-                       glm::vec3(0.5),
-                       32 );
-
-extern material rock( glm::vec3(0.2f, 0.2f, 0.2f),
-                      glm::vec3(0.2),
-                      32 );
-
-extern material snow( glm::vec3(0.2f, 0.2f, 0.2f),
-                      glm::vec3(0.2),
-                      32 );
+material water     ( glm::vec3(0.1f, 0.1f, 0.8f),  glm::vec3(0.5f),  32 );
+material grass     ( glm::vec3(0.1f, 0.6f, 0.1f),  glm::vec3(0.5f),  32 );
+material rock      ( glm::vec3(0.2f, 0.2f, 0.2f),  glm::vec3(0.2f),  32 );
+material snow      ( glm::vec3(0.9f, 0.9f, 0.9f),  glm::vec3(1.0f),  16 );
+material sand      ( 32 );
+material plainSand ( 32 );
+material sun;
 
 #endif

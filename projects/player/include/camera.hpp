@@ -15,7 +15,7 @@ const unsigned int SCR_HEIGHT = 1080 / 2;
 // Default camera values
 const float YAW         =  90.0f;   ///< Initial camera yaw
 const float PITCH       = -50.0f;   ///< Initial camera pitch
-const float SPEED       =  100.0f;  ///< Initial camera speed
+const float SPEED       =  50.0f;   ///< Initial camera speed
 const float SENSITIVITY =  0.1f;    ///< Initial mouse sensitivity
 const float SCROLLSPEED =  4.f;     ///< Initial scroll speed
 const float FOV         =  60.0f;   ///< Initial FOV (field of view)

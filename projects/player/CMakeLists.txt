@@ -34,14 +34,16 @@ ADD_EXECUTABLE(${PROJECT_NAME}
 	include/canvas.hpp
 	include/world.hpp
 
-	shaders/vertexShader.vs
-	shaders/fragmentShader.fs
-	shaders/vertexVec3_colorVec3.vs
-	shaders/vertexVec3_colorVec3.fs
-	shaders/vertexVec3_colorVec4_normalVec3.vs
-	shaders/vertexVec3_colorVec4_normalVec3.fs
-	shaders/vertexVec3_colorUnifVec4.vs
-	shaders/vertexVec3_colorUnifVec4.fs
+	shaders/terrain.vs
+	shaders/terrain.fs
+	shaders/sea.vs
+	shaders/sea.fs
+	shaders/axis.vs
+	shaders/axis.fs
+	shaders/sun.vs
+	shaders/sun.fs
+	shaders/icosahedron.vs
+	shaders/icosahedron.fs
 
 	../../files/TODO.txt
 	CMakeLists.txt

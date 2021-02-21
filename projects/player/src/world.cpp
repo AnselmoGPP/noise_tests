@@ -30,11 +30,7 @@ int terrainChunks::getMaxViewDist() { return maxViewDist; }
 
 terrainChunks::terrainChunks(noiseSet noise, float maxViewDist, float chunkSize, unsigned vertexPerSide)
 {
-    this->noise         = noise;
-    this->maxViewDist   = maxViewDist;
-    this->chunkSize     = chunkSize;
-    this->chunksVisible = std::round(maxViewDist/chunkSize);
-    this->vertexPerSide = vertexPerSide;
+    updateTerrainParameters(noise, maxViewDist, chunkSize, vertexPerSide);
 }
 
 terrainChunks::~terrainChunks() { }
@@ -75,19 +71,35 @@ void terrainChunks::updateVisibleChunks(glm::vec3 viewerPos)
             if(sqrtDistInChunks > maxSqrtDistInChunks)
                 continue;                                       // if out of range, skip iteration
 
-            BinaryKey chunkCoord(xOffset, yOffset);             // chunk name
+            BinaryKey chunkCoord(xOffset, yOffset);             // chunk name (key)
 
-            if(chunkDict.find(chunkCoord) == chunkDict.end())   // if(chunk doesn't exist in chunkDict)
+            if(chunkDict.find(chunkCoord) == chunkDict.end())   // if(chunk doesn't exist in chunkDict) add new chunk
             {
-                generator.computeTerrain(noise,
-                                         xOffset * chunkSize,
-                                         yOffset * chunkSize,
-                                         1,
-                                         vertexPerSide,
-                                         vertexPerSide  );
+                generator.computeTerrain( noise,
+                                          xOffset * chunkSize,
+                                          yOffset * chunkSize,
+                                          chunkSize/(vertexPerSide-1),
+                                          vertexPerSide,
+                                          vertexPerSide  );
 
                 //chunkDict.insert( {chunkCoord, generator} );  // Doesn't require default constructor. If element already exists, insert does nothing
-                chunkDict[chunkCoord] = generator;              // Requires default constructor.
+                chunkDict[chunkCoord] = generator;              // Requires default constructor
             }
         }
+}
+
+void terrainChunks::updateTerrainParameters(noiseSet noise, float maxViewDist, float chunkSize, unsigned vertexPerSide)
+{
+    chunkDict.clear();
+
+    this->noise         = noise;
+    this->maxViewDist   = maxViewDist;
+    this->chunkSize     = chunkSize;
+    this->chunksVisible = std::round(maxViewDist/chunkSize);
+    this->vertexPerSide = vertexPerSide;
+}
+
+void terrainChunks::setNoise(noiseSet newNoise)
+{
+    this->noise = newNoise;
 }

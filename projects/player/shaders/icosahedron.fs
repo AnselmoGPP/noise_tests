@@ -1,4 +1,4 @@
-// SUN
+// Icosahedron (light source)
 
 #version 330 core
 

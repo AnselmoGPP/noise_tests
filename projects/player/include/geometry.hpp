@@ -134,7 +134,7 @@ public:
     *   @param numVertex_Y Number of vertex along the Y axis
     *   @param textureFactor How much of the texture surface will fit in a square of 4 contiguous vertex
     */
-    void computeTerrain(noiseSet &noise, float x0, float y0, float stride, unsigned numVertex_X, unsigned numVertex_Y, float textureFactor = 1.f);
+    void computeTerrain(noiseSet &noise, float x0, float y0, float stride, unsigned numVertexX, unsigned numVertexY, float textureFactor = 1.f);
 
     unsigned getXside() const;      ///< Get number of vertex along X axis
     unsigned getYside() const;      ///< Get number of vertex along Y axis
@@ -178,9 +178,9 @@ void fillCubicSphere(float*** array, unsigned*** indices, float radius, unsigned
 /// Icosahedron data (vertices, colors, indices, normals)
 struct Icosahedron
 {
-    const int numIndices  = 20*3;
-    const int numVertices = 12*3;
-    const int numColors   = 12*4;
+    const int numIndicesx3  = 20*3;
+    const int numVerticesx3 = 12*3;
+    const int numColorsx4   = 12*4;
 
     float vertices[12*3] =
     {
