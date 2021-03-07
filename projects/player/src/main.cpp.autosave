@@ -9,7 +9,6 @@
 #define MANY_VAO 1          // 0.000680759
 //#define IMGUI_IMPL_OPENGL_LOADER_GLAD 1
 
-
 // Includes --------------------
 
 #include <iostream>

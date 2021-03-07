@@ -15,10 +15,10 @@ Bug:   terrainGenerator terrX = (worldChunks.chunkDict[k]);     // double free o
 Class encapsulation of OpenGL functions
 ImGui
 Light cast
-IS SAND REFLECTING CORRECTLY??
 Compute MVP matrices only once
 Pass parameters to the shader as uniforms (instead of hard-coding them in the shader)
 Single VAO for all chuncks
+BENCHMARK terrain generation (single VAO Vs multiple VAO)
 
 terrainChunks:
         (X) Fog

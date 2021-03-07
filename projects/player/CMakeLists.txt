@@ -24,6 +24,7 @@ ADD_EXECUTABLE(${PROJECT_NAME}
 	src/myGUI.cpp
 	src/canvas.cpp
 	src/world.cpp
+	src/timelib.cpp
 
 	include/global.hpp
 	include/auxiliar.hpp
@@ -33,6 +34,7 @@ ADD_EXECUTABLE(${PROJECT_NAME}
 	include/myGUI.hpp
 	include/canvas.hpp
 	include/world.hpp
+	include/timelib.hpp
 
 	shaders/terrain.vs
 	shaders/terrain.fs

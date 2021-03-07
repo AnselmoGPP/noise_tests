@@ -27,7 +27,18 @@ unsigned int createVBO(unsigned long num_bytes, void* pointerToData, int GL_XXX_
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, num_bytes, pointerToData, GL_XXX_DRAW);
-
+/*
+    if( num_bytes == (sizeof(float) * 2601 * 8) )//ans2
+    {
+        std::cout << "[" << num_bytes/4 << "]" << std::endl;
+        for(int i = 0; i < 10; i++)
+        {
+            std::cout << i << ": " << ((float*)pointerToData)[i*8    ] << ", "
+                                   << ((float*)pointerToData)[i*8 + 1] << ", "
+                                   << ((float*)pointerToData)[i*8 + 2] << std::endl;
+        }
+    }
+*/
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     return VBO;
 }
@@ -38,22 +49,30 @@ unsigned int createEBO(unsigned long num_bytes, void* pointerToData, int GL_XXX_
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, num_bytes, pointerToData, GL_XXX_DRAW);
-
+/*
+    if( num_bytes == (sizeof(float) * 15000) )//ans2
+    {
+        std::cout << "[" << num_bytes/4 << "]" << std::endl;
+        for(int i = 0; i < 15000/3; i++)
+        {
+            std::cout << i << ": " << ((unsigned*)pointerToData)[i*3    ] << ", "
+                                   << ((unsigned*)pointerToData)[i*3 + 1] << ", "
+                                   << ((unsigned*)pointerToData)[i*3 + 2] << std::endl;
+        }
+    }
+*/
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     return EBO;
 }
 
-void configVAO(unsigned VAO, unsigned VBO, unsigned EBO, int *sizes, unsigned numAtribs)
+void configVAO(unsigned VAO, int *sizes, unsigned numAtribs)
 {
     // Get stride
     int totalSize = 0;
     for(unsigned i = 0; i < numAtribs; i++) totalSize += sizes[i];
     int stride = totalSize * sizeof(float);
 
-    // Bind buffers
     glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
     // Specify pointers
     int pointer = 0;
@@ -65,10 +84,7 @@ void configVAO(unsigned VAO, unsigned VBO, unsigned EBO, int *sizes, unsigned nu
         pointer += sizes[i];
     }
 
-    // Unbind buffer
-    glBindBuffer(GL_ARRAY_BUFFER, 0);           // unbind VBO (not usual)
-    glBindVertexArray(0);                       // unbind VAO (not usual)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);   // unbind EBO
+    glBindVertexArray(0);
 }
 
 void configVAO(unsigned VAO, unsigned VBO, int* sizes, unsigned numAtribs)
@@ -95,6 +111,34 @@ void configVAO(unsigned VAO, unsigned VBO, int* sizes, unsigned numAtribs)
     // Unbind buffers
     glBindBuffer(GL_ARRAY_BUFFER, 0);           // unbind VBO (not usual)
     glBindVertexArray(0);                       // unbind VAO (not usual)
+}
+
+void configVAO(unsigned VAO, unsigned VBO, unsigned EBO, int *sizes, unsigned numAtribs, bool bindVAO)
+{
+    // Get stride
+    int totalSize = 0;
+    for(unsigned i = 0; i < numAtribs; i++) totalSize += sizes[i];
+    int stride = totalSize * sizeof(float);
+
+    // Bind buffers
+    if(bindVAO) glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+    // Specify pointers
+    int pointer = 0;
+    for(unsigned i = 0; i < numAtribs; i++)
+    {
+        glVertexAttribPointer( i, sizes[i], GL_FLOAT, GL_FALSE, stride, (void *)(pointer * sizeof(float)) );
+        glEnableVertexAttribArray(i);
+
+        pointer += sizes[i];
+    }
+
+    // Unbind buffer
+    glBindBuffer(GL_ARRAY_BUFFER, 0);           // unbind VBO (not usual)
+    if(bindVAO) glBindVertexArray(0);           // unbind VAO (not usual)
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);   // unbind EBO
 }
 
 unsigned createTexture2D(const char *fileAddress, int internalFormat)

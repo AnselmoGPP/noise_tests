@@ -24,8 +24,8 @@ bool BinaryKey::operator ==( const BinaryKey &rhs ) const
 
 // terrainChunks --------------------------------------------
 
-int terrainChunks::getNumVertex() { return vertexPerSide * vertexPerSide; }
-int terrainChunks::getNumIndices() { return (vertexPerSide-1) * (vertexPerSide-1) * 2 * 3; }
+int terrainChunks::getNumVertex()   { return vertexPerSide * vertexPerSide; }
+int terrainChunks::getNumIndices()  { return (vertexPerSide-1) * (vertexPerSide-1) * 2 * 3; }
 int terrainChunks::getMaxViewDist() { return maxViewDist; }
 
 terrainChunks::terrainChunks(noiseSet noise, float maxViewDist, float chunkSize, unsigned vertexPerSide)
