@@ -5,10 +5,9 @@
 
 // Macros -----------------------------------
 
-//#define SINGLE_VAO        // 0.000802952
-#define MANY_VAO 1          // 0.000680759
+//#define SINGLE_VAO        // 0.000802952 sec
+#define MANY_VAO 1          // 0.000680759 sec
 //#define IMGUI_IMPL_OPENGL_LOADER_GLAD 1
-
 
 // Includes --------------------
 
@@ -238,9 +237,9 @@ int main()
 
     myGUI gui(window);
 
-    averager avg;
-    timerSet terrainTime;
-    terrainTime.startTime();
+    //averager avg;
+    //timerSet terrainTime;
+    //terrainTime.startTime();
 
     timer.startTime();
     
@@ -260,7 +259,7 @@ int main()
 
         glClearColor(skyColor.x, skyColor.y, skyColor.z, skyColor.a);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);           // GL_STENCIL_BUFFER_BIT
-        
+
         // GUI
         gui.implement_NewFrame();
         //GUI_terrainConfig(VAO, VBO, EBO);
@@ -271,10 +270,10 @@ int main()
 
         setUniformsTerrain(terrProgram);
 
-        terrainTime.computeDeltaTime();
+        //terrainTime.computeDeltaTime();
         updateTerrain(VAO, VBO, EBO);
-        terrainTime.computeDeltaTime();
-        avg.addValue(terrainTime.getDeltaTime());
+        //terrainTime.computeDeltaTime();
+        //avg.addValue(terrainTime.getDeltaTime());
 
         // >>> Water
         setUniformsWater(waterProg);
@@ -360,7 +359,7 @@ int main()
     
     glfwTerminate();
 
-    std::cout << "Average time: " << avg.getAverage() << std::endl;
+    //std::cout << "Average time: " << avg.getAverage() << std::endl;
     return 0;
 }
 

@@ -42,8 +42,11 @@ void terrainChunks::updateVisibleChunks(glm::vec3 viewerPos)
     int viewerChunkCoord_Y = std::round(viewerPos.y / chunkSize);
     int viewerChunkCoord_Z = std::round(viewerPos.z / chunkSize);
 
-    // Delete chunks out of range
+    // Delete chunks out of range    
     typedef std::map<BinaryKey, terrainGenerator> dictionary;
+
+    std::vector<dictionary::const_iterator> toErase;
+
     for(dictionary::const_iterator it = chunkDict.begin(); it != chunkDict.end(); ++it)
     {
         BinaryKey key = it->first;
@@ -51,14 +54,18 @@ void terrainChunks::updateVisibleChunks(glm::vec3 viewerPos)
         // Circular area
         float sqrtDistInChunks = (key.x-viewerChunkCoord_X)*(key.x-viewerChunkCoord_X) + (key.y-viewerChunkCoord_Y)*(key.y-viewerChunkCoord_Y);
         float maxSqrtDistInChunks = (chunksVisible + 0.5) * (chunksVisible + 0.5);
+
         if(sqrtDistInChunks > maxSqrtDistInChunks)
-            chunkDict.erase(it);
+            toErase.push_back(it);
 
         // Square area
         //if(key.x < viewerChunkCoord_X - chunksVisible || key.x > viewerChunkCoord_X + chunksVisible ||
         //   key.y < viewerChunkCoord_Y - chunksVisible || key.y > viewerChunkCoord_Y + chunksVisible )
-        //    chunkDict.erase(it);
+        //    toErase.push_back(it);
     }
+
+    for(size_t i = 0; i < toErase.size(); ++i)
+        chunkDict.erase(toErase[i]);
 
     // Save chunks in range
     terrainGenerator generator;
@@ -86,6 +93,7 @@ void terrainChunks::updateVisibleChunks(glm::vec3 viewerPos)
                 chunkDict[chunkCoord] = generator;              // Requires default constructor
             }
         }
+
 }
 
 void terrainChunks::updateTerrainParameters(noiseSet noise, float maxViewDist, float chunkSize, unsigned vertexPerSide)
